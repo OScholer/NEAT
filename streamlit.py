@@ -329,7 +329,9 @@ if path_option == "Define a model":
                         show_cosmo = cosmo_options[0].checkbox("Show cosmology limit?", key =plotoptions+str(plotidx))
                         if show_cosmo:
                             m_cosmo = cosmo_options[1].number_input("Limit on the sum of neutrino masses [meV]", help="Preset limit: S.R. Choudhury and S. Hannestad, 2019, arxiv:1907.12598", value = 150, key = "m_cosmo"+str(plotidx))*1e-3
-                    fig = LEFT_model.plot_m_eff_scatter(vary_WC = vary_WC, vary_phases = vary_phases,  
+                    fig = LEFT_model.plot_m_eff_scatter(vary_WC = vary_WC, vary_phases = vary_phases, 
+                                                        compare_to_mass = compare_to_mass, 
+                                                        normalize_to_mass = normalize_to_mass,
                                                         cosmo=show_cosmo, m_cosmo = m_cosmo, element_name = plot_isotope, 
                                                         vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)#, compare_to_mass = compare_to_mass, normalize_to_mass = normalize_to_mass)
 
@@ -346,10 +348,10 @@ if path_option == "Define a model":
                     show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions+str(potidx))
                     fig = LEFT_model.plot_t_half(cosmo=show_cosmo, element_name = plot_isotope)
                 else:
-                    xlim_cols = st.beta_columns(2)
+                    xlim_cols = st.beta_columns(3)
                     if vary_WC == "m_min":
-                        x_min = xlim_cols[0].number_input("Minimum m_min [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
-                        x_max = xlim_cols[1].number_input("Maximum m_min [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
+                        x_min = 10**xlim_cols[0].number_input("Minimum m_min exponent [eV]", value = -4, key = "xmin"+str(plotidx))
+                        x_max = 10**xlim_cols[1].number_input("Maximum m_min exponent [meV]", value = 0, key = "xmax"+str(plotidx))
                     elif vary_WC == "m_bb":
                         x_min = xlim_cols[0].number_input("Minimum m_bb [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
                         x_max = xlim_cols[1].number_input("Maximum m_bb [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
@@ -359,15 +361,20 @@ if path_option == "Define a model":
                     else:
                         x_min = xlim_cols[0].number_input("Minimum C_"+vary_WC+" [1e-6]", value = 0.1, key = "xmin"+str(plotidx))*1e-6
                         x_max = xlim_cols[1].number_input("Maximum C_"+vary_WC+" [1e-6]", value = 1000., key = "xmax"+str(plotidx))*1e-6
-                    option_cols = st.beta_columns(2)
-                    vary_LECs = option_cols[0].checkbox("Vary unknown LECs?", key =plotoptions+"1"+str(plotidx), help = "If you check this box we will vary all unknown LECs around their order of magnitude estimate O (i.e. from log_10(O) to log10(O+1)) . g_nuNN will be varied 50% around it's theoretical estimate.")
+                    option_cols = st.beta_columns(4)
+                    vary_LECs = option_cols[0].checkbox("Vary unknown LECs?", key =plotoptions+"1"+str(plotidx), help = "If you check this box we will vary all unknown LECs around their order of magnitude estimate O (i.e. from 1/sqrt(10) to sqrt(10) times the estimate . g_nuNN will be varied 50% around it's theoretical estimate.")
                     vary_phases = option_cols[1].checkbox("Vary phase?", key =plotoptions+"2"+str(plotidx), value=True, help = "If you check this box we will vary the complex phase of the operator chosen for the x-axis.")
+                    
                     if vary_WC == "m_min":
+                        compare_to_mass = option_cols[2].checkbox("Compare to mass mechanism?", key =plotoptions+"3"+str(plotidx), value=False, help = "If you check this box we will plot the contribution of the standard mass mechanism for comparison.")
+                        normalize_to_mass = option_cols[3].checkbox("Normalize to mass mechanism?", key =plotoptions+"3"+str(plotidx), value=False, help = "If you check this box we will normalize the y-axis with respect to the contributions of the standard mass mechanism.")
                         cosmo_options = st.beta_columns(2)
                         show_cosmo = cosmo_options[0].checkbox("Show cosmology limit?", key =plotoptions+str(plotidx))
                         if show_cosmo:
                             m_cosmo = cosmo_options[1].number_input("Limit on the sum of neutrino masses [meV]", help="Preset limit: S.R. Choudhury and S. Hannestad, 2019, arxiv:1907.12598", value = 150, key = "m_cosmo"+str(plotidx))*1e-3
                     fig = LEFT_model.plot_t_half_scatter(vary_WC = vary_WC, vary_phases = vary_phases, 
+                                                         compare_to_mass = compare_to_mass, 
+                                                         normalize_to_mass = normalize_to_mass, 
                                                          cosmo=show_cosmo, m_cosmo = m_cosmo, element_name = plot_isotope, 
                                                          vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)
 
@@ -387,10 +394,10 @@ if path_option == "Define a model":
                     show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions)
                     fig = LEFT_model.plot_t_half_inv(cosmo=show_cosmo, element_name = plot_isotope)
                 else:
-                    xlim_cols = st.beta_columns(2)
+                    xlim_cols = st.beta_columns(3)
                     if vary_WC == "m_min":
-                        x_min = xlim_cols[0].number_input("Minimum m_min [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
-                        x_max = xlim_cols[1].number_input("Maximum m_min [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
+                        x_min = 10**xlim_cols[0].number_input("Minimum m_min exponent [eV]", value = -4, key = "xmin"+str(plotidx))
+                        x_max = 10**xlim_cols[1].number_input("Maximum m_min exponent [meV]", value = 0, key = "xmax"+str(plotidx))
                     elif vary_WC == "m_bb":
                         x_min = xlim_cols[0].number_input("Minimum m_bb [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
                         x_max = xlim_cols[1].number_input("Maximum m_bb [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
@@ -400,15 +407,20 @@ if path_option == "Define a model":
                     else:
                         x_min = xlim_cols[0].number_input("Minimum C_"+vary_WC+" [1e-6]", value = 0.1, key = "xmin"+str(plotidx))*1e-6
                         x_max = xlim_cols[1].number_input("Maximum C_"+vary_WC+" [1e-6]", value = 1000., key = "xmax"+str(plotidx))*1e-6
-                    option_cols = st.beta_columns(2)
-                    vary_LECs = option_cols[0].checkbox("Vary unknown LECs?", key =plotoptions+"1"+str(plotidx), help = "If you check this box we will vary all unknown LECs around their order of magnitude estimate O (i.e. from log_10(O) to log10(O+1)) . g_nuNN will be varied 50% around it's theoretical estimate.")
+                    option_cols = st.beta_columns(4)
+                    vary_LECs = option_cols[0].checkbox("Vary unknown LECs?", key =plotoptions+"1"+str(plotidx), help = "If you check this box we will vary all unknown LECs around their order of magnitude estimate O (i.e. from 1/sqrt(10) to sqrt(10) times the estimate . g_nuNN will be varied 50% around it's theoretical estimate.")
                     vary_phases = option_cols[1].checkbox("Vary phase?", key =plotoptions+"2"+str(plotidx), value=True, help = "If you check this box we will vary the complex phase of the operator chosen for the x-axis.")
+                    
                     if vary_WC == "m_min":
+                        compare_to_mass = option_cols[2].checkbox("Compare to mass mechanism?", key =plotoptions+"3"+str(plotidx), value=False, help = "If you check this box we will plot the contribution of the standard mass mechanism for comparison.")
+                        normalize_to_mass = option_cols[3].checkbox("Normalize to mass mechanism?", key =plotoptions+"3"+str(plotidx), value=False, help = "If you check this box we will normalize the y-axis with respect to the contributions of the standard mass mechanism.")
                         cosmo_options = st.beta_columns(2)
                         show_cosmo = cosmo_options[0].checkbox("Show cosmology limit?", key =plotoptions+str(plotidx))
                         if show_cosmo:
                             m_cosmo = cosmo_options[1].number_input("Limit on the sum of neutrino masses [meV]", help="Preset limit: S.R. Choudhury and S. Hannestad, 2019, arxiv:1907.12598", value = 150, key = "m_cosmo"+str(plotidx))*1e-3
                     fig = LEFT_model.plot_t_half_inv_scatter(vary_WC = vary_WC, vary_phases = vary_phases, 
+                                                             compare_to_mass = compare_to_mass, 
+                                                             normalize_to_mass = normalize_to_mass, 
                                                              cosmo=show_cosmo, m_cosmo = m_cosmo, element_name = plot_isotope, 
                                                              vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)
                 st.pyplot(fig)

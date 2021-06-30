@@ -3292,6 +3292,16 @@ class LEFT(object):
             #if t < 1e+26:
             #    forbidden_LECsNO.append(model.LEC["nuNN"])
             #    forbidden_LECsNOm.append(m_min)
+            
+            points[x][1] = t
+            if normalize_to_mass and vary_WC in ["m_min", "m_bb"]:
+                WC_backup = self.WC.copy()
+                for operator in self.WC:
+                    if operator != "m_bb":
+                        self.WC[operator]=0
+                t_half_mbb = self.t_half(element_name)
+                self.WC = WC_backup.copy()
+                points[x][1] /= t_half_mbb
             if vary_WC == "m_min":
                 self.WC["m_bb"] = mIO
                 #for LEC in LECs:
@@ -3308,12 +3318,19 @@ class LEFT(object):
                 pointsIO[x][0] = m_min
                 pointsIO[x][1] = tIO
                 points[x][0] = m_min
+                if normalize_to_mass and vary_WC in ["m_min", "m_bb"]:
+                    WC_backup = self.WC.copy()
+                    for operator in self.WC:
+                        if operator != "m_bb":
+                            self.WC[operator]=0
+                    t_half_mbb = self.t_half(element_name)
+                    self.WC = WC_backup.copy()
+                    pointsIO[x][1] /= t_half_mbb
             else:
                 if vary_WC == "m_bb":
                     points[x][0] = np.absolute(self.WC[vary_WC])*1e+9
                 else:
                     points[x][0] = np.absolute(self.WC[vary_WC])
-            points[x][1] = t
 
         self.WC["m_bb"] = m_backup
         self.LEC = LEC_backup.copy()
@@ -3356,7 +3373,10 @@ class LEFT(object):
         plt.plot(pointsIO[:,0],pointsIO[:,1], "r.", alpha = alpha_plot, markersize = 0.15)
         plt.yscale("log")
         plt.xscale("log")
-        plt.ylabel(r"$t_{1/2}^{-1} [yr]$ ", fontsize=20)
+        if normalize_to_mass:
+            plt.ylabel(r"$\frac{t_{1/2}}{t_{1/2, m_{\beta\beta}}}$", fontsize=20)
+        else:
+            plt.ylabel(r"$t_{1/2}$ [yr]", fontsize=20)
         if vary_WC == "m_min":
             plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
         else:
@@ -3490,7 +3510,16 @@ class LEFT(object):
             #if t < 1e+26:
             #    forbidden_LECsNO.append(model.LEC["nuNN"])
             #    forbidden_LECsNOm.append(m_min)
-
+            
+            points[x][1] = 1/t
+            if normalize_to_mass and vary_WC in ["m_min", "m_bb"]:
+                WC_backup = self.WC.copy()
+                for operator in self.WC:
+                    if operator != "m_bb":
+                        self.WC[operator]=0
+                t_half_mbb = self.t_half(element_name)
+                self.WC = WC_backup.copy()
+                points[x][1] *= t_half_mbb
             if vary_WC == "m_min":
                 self.WC["m_bb"] = mIO
                 #for LEC in LECs:
@@ -3507,12 +3536,19 @@ class LEFT(object):
                 pointsIO[x][0] = m_min
                 pointsIO[x][1] = 1/tIO
                 points[x][0] = m_min
+                if normalize_to_mass and vary_WC in ["m_min", "m_bb"]:
+                    WC_backup = self.WC.copy()
+                    for operator in self.WC:
+                        if operator != "m_bb":
+                            self.WC[operator]=0
+                    t_half_mbb = self.t_half(element_name)
+                    self.WC = WC_backup.copy()
+                    pointsIO[x][1] *= t_half_mbb
             else:
                 if vary_WC == "m_bb":
                     points[x][0] = np.absolute(self.WC[vary_WC])*1e+9
                 else:
                     points[x][0] = np.absolute(self.WC[vary_WC])
-            points[x][1] = 1/t
         
         self.WC["m_bb"] = m_backup
         self.LEC = LEC_backup.copy()
@@ -3561,7 +3597,10 @@ class LEFT(object):
         plt.plot(pointsIO[:,0],pointsIO[:,1], "r.", alpha = alpha_plot, markersize = 0.15)
         plt.yscale("log")
         plt.xscale("log")
-        plt.ylabel(r"$t_{1/2}^{-1} [yr^{-1}]$ ", fontsize=20)
+        if normalize_to_mass:
+            plt.ylabel(r"$\frac{t_{1/2, m_{\beta\beta}}}{t_{1/2}}$", fontsize=20)
+        else:
+            plt.ylabel(r"$t_{1/2}^{-1}$ [yr$^{-1}$]", fontsize=20)
         plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
         plt.xlim(x_min,x_max)
         plt.ylim(y_min,y_max)
