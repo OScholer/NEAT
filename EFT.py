@@ -3082,6 +3082,12 @@ class LEFT(object):
             #if t < 1e+26:
             #    forbidden_LECsNO.append(model.LEC["nuNN"])
             #    forbidden_LECsNOm.append(m_min)
+            
+            
+            points[x][1] = m_eff
+            if normalize_to_mass and vary_WC in ["m_min", "m_bb"]:
+                points[x][1]/=self.WC["m_bb"]*1e+9
+            
             if vary_WC == "m_min":
                 self.WC["m_bb"] = mIO
                 #for LEC in LECs:
@@ -3099,19 +3105,18 @@ class LEFT(object):
                 pointsIO[x][0] = m_min
                 pointsIO[x][1] = m_effIO
                 points[x][0] = m_min
-                if normalize_to_mass:
-                    points[x][1]/=self.WC["m_bb"]
-                    pointsIO[x][1] /= self.WC["m_bb"]
+                if normalize_to_mass and vary_WC in ["m_min"]:
+                    pointsIO[x][1] /= self.WC["m_bb"]*1e+9
                     
             else:
                 if vary_WC == "m_bb":
                     points[x][0] = np.absolute(self.WC[vary_WC])*1e+9
                 else:
                     points[x][0] = np.absolute(self.WC[vary_WC])
-            points[x][1] = m_eff
             
             
-
+        print(pointsIO[:][1])
+        print(points[:][1])
         self.WC["m_bb"] = m_backup
         self.LEC = LEC_backup.copy()
         if vary_WC != "m_min":
@@ -3138,7 +3143,12 @@ class LEFT(object):
             plt.plot(points[:,0],points[:,1], "b,", alpha = alpha_plot, label=vary_WC)
         plt.yscale("log")
         plt.xscale("log")
-        plt.ylabel(r"$|m_{\beta\beta}^{eff}|$ [eV]", fontsize=20)
+        if vary_WC == "m_min":
+            plt.legend(fontsize=20)
+        if normalize_to_mass:
+            plt.ylabel(r"$\left|\frac{m_{\beta\beta}^{eff}}{m_{\beta\beta}}\right|$", fontsize=20)
+        else:
+            plt.ylabel(r"$|m_{\beta\beta}^{eff}|$ [eV]", fontsize=20)
         if vary_WC == "m_min":
             plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
         else:
