@@ -18,29 +18,68 @@ from matplotlib.lines import Line2D
 
 
 def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "IBM2", 
-                  numerical_method="lm", n_dots=600, linewidth=0, x_min=None, x_max=None, 
-                  savefig=False, phase=3/4*np.pi, varyphases = False, n_vary=5):
+                  numerical_method="lm", n_dots=1000, linewidth=0, x_min=None, x_max=None, 
+                  savefig=False, phase=3/4*np.pi, varyphases = False, n_vary=5):#, eft = "LEFT"):
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    model=EFT.LEFT({}, method=method)
+    #if eft == "LEFT":
+    SMEFT_WCs = EFT.SMEFT_WCs
+    g_A = 1.27
+    def get_constants(element_name):
+        model=EFT.LEFT({}, method=method)
+        is_SMEFT = False
+        if WCx in SMEFT_WCs:
+            is_SMEFT = True
+            SMEFT_model = EFT.SMEFT({}, scale = 1e+3)
+            WCsx = SMEFT_model.LEFT_matching(WC={WCx:1})
+            WCsy = SMEFT_model.LEFT_matching(WC={WCy:1})
+            WC = {}
+            WC[WCx] = WCsx
+            WC[WCy] = WCsy
+            for operator in model.WC:
+                model.WC[operator] = WC[WCx][operator]
+            Ax, Mx = model.amplitudes(element_name = element_name, WC = model.WC)
+            tx = model.t_half(element_name = element_name)
+            for operator in model.WC:
+                model.WC[operator] = 0
+            for operator in model.WC:
+                model.WC[operator] = WC[WCy][operator]
+            Ay, My = model.amplitudes(element_name = element_name, WC = model.WC)
+            ty = model.t_half(element_name = element_name)
+            for operator in model.WC:
+                model.WC[operator] = 0
+        else:
+            for operator in model.WC:
+                model.WC[operator] = 0
+            model.WC[WCx] = 1
+            Ax, Mx = model.amplitudes(element_name = element_name, WC = model.WC)
+            tx = model.t_half(element_name = element_name)
+            model.WC[WCx] = 0
+            model.WC[WCy] = 1
+            Ay, My = model.amplitudes(element_name = element_name, WC = model.WC)
+            ty = model.t_half(element_name = element_name)
+            model.WC[WCy] = 0
+        element = model.elements[element_name]
+        G = model.to_G(element_name)
+        #m_e = pc["electron mass energy equivalent in MeV"][0]
+
+        #Some PSFs need a rescaling due to different definitions in DOIs paper and 1806...
+        g_06_rescaling = model.m_e_MEV*element.R/2
+        g_09_rescaling = g_06_rescaling**2
+        g_04_rescaling = 9/2
+        G["06"] *= g_06_rescaling
+        G["04"] *= g_04_rescaling
+        G["09"] *= g_09_rescaling
+        return(model, tx, Ax, ty, Ay, G, is_SMEFT)
+    
+    #model=EFT.LEFT({}, method=method)
+    #else:
+    #    model = EFT.SMEFT({}, method = method, scale = 1e+3)
+    
+
     if (x_min == None or x_max == None) and x_min != x_max:
-        #print("You need to set both x_min and x_max or let the code chose both!")
+        print("You need to set both x_min and x_max or let the code choose both!")
         return()
-    
-    for operator in model.WC:
-        model.WC[operator] = 0
-    def t_half_optimize(WC_valuey, WC_valuex, WCx, WCy, element_name, phase):
-        #WC_value1, WC_value2 = WC
-        #print(WC_value1)
-        #print(WC_value2)
-        model.WC[WCx] = WC_valuex#[0]
-        model.WC[WCy] = WC_valuey*np.exp(1j*phase)#[0]
-        #print(model.WC)
-        hl = model.t_half(element_name, method = method)
-        model.WC[WCx] = 0
-        model.WC[WCy] = 0
-        #print(hl)
-        return ((hl-limit))
-    
+
     exp=experiments.copy()
     experiments={}
     #sort experiments by hl
@@ -55,11 +94,15 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
     for experiment in experiments:
         limit = experiments[experiment][0]
         element_name = experiments[experiment][1]
-
-        
+        model, tx, Ax, ty, Ay, G, is_SMEFT = get_constants(element_name)
+        if is_SMEFT:
+            fac = 3
+        else:
+            fac = 1.5
         #if experiment == list(experiments.keys())[0]:
         #find the range of the curve by finding the maximal value 
-        radius[experiment] = 1.5*scipy.optimize.root(t_half_optimize, args=(0, WCy, WCx, element_name, phase), x0 = 1e-15).x[0]
+        #radius[experiment] = 1.5*scipy.optimize.root(t_half_optimize, args=(0, WCx, WCy, element_name, phase), x0 = 1e-15).x[0]
+        radius[experiment] = fac * np.sqrt(tx/limit)
         #radius2 = 1.2*scipy.optimize.fsolve(t_half_optimize, args=(0, WCy, WCx, element_name), x0 = 1e-15, maxfev=10000)[0]
 
         if x_min == None:
@@ -70,9 +113,12 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
             x_max =  radius[experiment]
             #print("radius",radius)
             #print("radius2",radius2)
+    print(x_min, x_max)
     for experiment in experiments:
         limit = experiments[experiment][0]
         element_name = experiments[experiment][1]
+        model, tx, Ax, ty, Ay, G, is_SMEFT = get_constants(element_name)
+        
         if varyphases:
             phases = np.linspace(0, np.pi, n_vary)
             for idx in range(n_vary):
@@ -89,60 +135,41 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
                 #for x in np.linspace(-radius[experiment],radius[experiment], n_dots):
                 for x in np.linspace(x_min,x_max, n_dots):
                     #find the scale at which to search for the minima
-                    x0 = 1000*scipy.optimize.root(t_half_optimize, args=(0, WCx, WCy, element_name, phase), 
-                                                  x0 = 1e-15).x[0]
-                    #x0=1
-                    model.WC[WCx] = x
-                    optim1 = scipy.optimize.root(t_half_optimize, args = (x, WCx, WCy, element_name, phase) , 
-                                                 x0 = x0, method = numerical_method)
-                    result1 = optim1.x[0]
-                    #model.WC[WCy] = result1
 
-                    #look for multiple roots
-                    #optim3 = scipy.optimize.root(t_half_optimize, args = (x, WCx, WCy, element_name) , x0 = -result1, method = numerical_method)
-                    #result3 = optim3.x[0]
-                    #model.WC[WCy] = result1
+                    #Calculate half-life following eq 38. in 1806.02780
+                    a = 1/ty
+                    b = 2*np.cos(phase)*x*g_A**4*(G["01"] * (Ax["nu"]*Ay["nu"]
+                                                             + Ax["R"]*Ay["R"])
+                                                  - 2 * (G["01"] - G["04"])*(Ax["nu"]*Ay["R"]
+                                                                             +Ay["nu"]*Ax["R"])
+                                                  + 4 *  G["02"]* (Ax["E"]*Ay["E"])
+                                                  + 2 *  G["04"]*(Ax["me"]*Ay["me"] 
+                                                                  + (Ax["me"]*(Ay["nu"]+Ay["R"]))
+                                                                  + (Ay["me"]*(Ax["nu"]+Ax["R"])))
+                                                  - 2 *  G["03"]*((Ax["nu"]+Ax["R"])*(Ay["E"]) 
+                                                                  + (Ay["nu"]+Ay["R"])*(Ax["E"])
+                                                                  + 2*Ax["me"]*Ay["E"]
+                                                                  + 2*Ay["me"]*Ax["E"])
+                                                  + G["09"] * Ax["M"]*Ay["M"]
+                                                  + G["06"] * ((Ax["nu"]-Ax["R"])*(Ay["M"]) 
+                                                               + (Ay["nu"]-Ay["R"])*(Ax["M"])))
+                    c = 1/tx*x**2 - 1/limit
+                    
+                    
+                    y = (-b + np.sqrt(b**2-4*a*c+0*1j))/(2*a)
+                    y2 = (-b - np.sqrt(b**2-4*a*c+0*1j))/(2*a)
 
 
-                    optim2 = scipy.optimize.root(t_half_optimize, args = (x, WCx, WCy, element_name, phase) , 
-                                                 x0 = -x0, method = numerical_method)
-                    result2 = optim2.x[0]
-                    #model.WC[WCy] = result2
-
-                    #look for multiple roots
-                    #optim4 = scipy.optimize.root(t_half_optimize, args = (x, WCx, WCy, element_name) , x0 = -result2, method = numerical_method)
-                    #result4 = optim4.x[0]
-
-
-                    #model.WC[WCy] = result1
-                    #if model.t_half(element_name) >= limit:
-                    #if np.absolute((result1 - result2)/(result1+result2))>1e-3:
-                    if optim1.status == 2 and optim2.status == 2:
+                    if y.imag == 0 and y2.imag == 0:
                         xplot.append(x)
-                        contour.append(result1)
-                        contour2.append(result2)
-                        #if result1 != result3 and result2 != result4:
-                        #    xplot2.append(x)
-                        #    contour3.append(result3)
-                        #    contour4.append(result4)
-                        model.WC[WCy] = contour[-1]
-                        model.WC[WCx] = xplot[-1]
-                    #print(model.t_half(element_name))
-
-                    #set WCs to 0 just to be save
-                    model.WC[WCx] = 0
-                    model.WC[WCy] = 0
+                        contour.append(y)
+                        contour2.append(y2)
 
 
 
-                #print(x0)
-
-                #plt.plot(np.array(xplot)*1e+9, np.array(contour), "b-", linewidth = 2)
-                #plt.plot(np.array(xplot)*1e+9, np.array(contour2), "r-", linewidth = 2)
-                #print(len(contour))
                 if WCx == "m_bb":
                     plt.xlabel(r"$m_{\beta\beta}$ [eV]", fontsize = 20)
-                    plt.ylabel(WCy, fontsize = 20)
+                    plt.ylabel(r"$C_{"+WCy[:-3]+"}^{"+WCy[-3:]+"}$", fontsize = 20)
                     #plt.plot(np.array(xplot)*1e+9, np.array(contour), "b-", linewidth = linewidth)
                     #plt.plot(np.array(xplot)*1e+9, np.array(contour2), "b-", linewidth = linewidth)
                     plt.fill_between(np.array(xplot)*1e+9, np.array(contour), np.array(contour2), #label=experiment, 
@@ -151,18 +178,29 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
                     #                 label=experiment)
                 elif WCy == "m_bb":
                     plt.ylabel(r"$m_{\beta\beta}$ [eV]", fontsize = 20)
-                    plt.xlabel(WCx, fontsize = 20)
+                    plt.xlabel(r"$C_{"+WCx[:-3]+"}^{"+WCx[-3:]+"}$", fontsize = 20)
                     #plt.plot(np.array(xplot), np.array(contour)*1e+9, "b-", linewidth = linewidth)
                     #plt.plot(np.array(xplot), np.array(contour2)*1e+9, "b-", linewidth = linewidth)
                     plt.fill_between(np.array(xplot), np.array(contour)*1e+9, np.array(contour2)*1e+9, #label=experiment, 
                                      alpha=np.min([1/(2*n_vary), 1/(2*len(experiments))]), color=colors[exp_idx])
                     #plt.fill_between(np.array(xplot2), np.array(contour3)*1e+9, np.array(contour4)*1e+9, color = "c", label=experiment)
                 else:
-                    plt.xlabel(WCx, fontsize = 20)
-                    plt.ylabel(WCy, fontsize = 20)
-                    #plt.plot(np.array(xplot), np.array(contour), "b-", linewidth = linewidth)
-                    #plt.plot(np.array(xplot), np.array(contour2), "b-", linewidth = linewidth)
-                    plt.fill_between(np.array(xplot), np.array(contour), np.array(contour2), #label=experiment, 
+                    if is_SMEFT:
+                        xdimension = int(WCx[-2])
+                        ydimension = int(WCy[-2])
+                        plt.xlabel(r"$C_{"+WCx[:-3]+"}^{"+WCx[-3:]+"}$ [TeV$^-"+str(xdimension-4)+"$]", fontsize = 20)
+                        plt.ylabel(r"$C_{"+WCy[:-3]+"}^{"+WCy[-3:]+"}$ [TeV$^-"+str(ydimension-4)+"$]", fontsize = 20)
+                        plt.fill_between((1e+3)**(xdimension-4)*np.array(xplot), 
+                                         (1e+3)**(ydimension-4)*np.array(contour), 
+                                         (1e+3)**(ydimension-4)*np.array(contour2), #label=experiment, 
+                                         alpha=np.min([1/(2*n_vary), 1/(2*len(experiments))]), color=colors[exp_idx])
+                    
+                    else:
+                        plt.xlabel(r"$C_{"+WCx[:-3]+"}^{"+WCx[-3:]+"}$", fontsize = 20)
+                        plt.ylabel(r"$C_{"+WCy[:-3]+"}^{"+WCy[-3:]+"}$", fontsize = 20)
+                        #plt.plot(np.array(xplot), np.array(contour), "b-", linewidth = linewidth)
+                        #plt.plot(np.array(xplot), np.array(contour2), "b-", linewidth = linewidth)
+                        plt.fill_between(np.array(xplot), np.array(contour), np.array(contour2), #label=experiment, 
                                      alpha=np.min([1/(2*n_vary), 1/(2*len(experiments))]), color=colors[exp_idx])
                     #plt.fill_between(np.array(xplot2), np.array(contour3), np.array(contour4), color = "c", 
                     #                 label=experiment)
@@ -177,51 +215,39 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
             xplot = []
             xplot2 = []
             #for x in np.linspace(-radius[experiment],radius[experiment], n_dots):
+                
+            #for x in np.linspace(-radius[experiment],radius[experiment], n_dots):
             for x in np.linspace(x_min,x_max, n_dots):
                 #find the scale at which to search for the minima
-                x0 = 1000*scipy.optimize.root(t_half_optimize, args=(0, WCx, WCy, element_name, phase), 
-                                              x0 = 1e-15).x[0]
-                #x0=1
-                model.WC[WCx] = x
-                optim1 = scipy.optimize.root(t_half_optimize, args = (x, WCx, WCy, element_name, phase) , 
-                                             x0 = x0, method = numerical_method)
-                result1 = optim1.x[0]
-                #model.WC[WCy] = result1
 
-                #look for multiple roots
-                #optim3 = scipy.optimize.root(t_half_optimize, args = (x, WCx, WCy, element_name) , x0 = -result1, method = numerical_method)
-                #result3 = optim3.x[0]
-                #model.WC[WCy] = result1
-
-
-                optim2 = scipy.optimize.root(t_half_optimize, args = (x, WCx, WCy, element_name, phase) , 
-                                             x0 = -x0, method = numerical_method)
-                result2 = optim2.x[0]
-                #model.WC[WCy] = result2
-
-                #look for multiple roots
-                #optim4 = scipy.optimize.root(t_half_optimize, args = (x, WCx, WCy, element_name) , x0 = -result2, method = numerical_method)
-                #result4 = optim4.x[0]
+                #Calculate half-life following eq 38. in 1806.02780
+                a = 1/ty
+                b = 2*np.cos(phase)*x*g_A**4*(G["01"] * (Ax["nu"]*Ay["nu"]
+                                                         + Ax["R"]*Ay["R"])
+                                              - 2 * (G["01"] - G["04"])*(Ax["nu"]*Ay["R"]
+                                                                         +Ay["nu"]*Ax["R"])
+                                              + 4 *  G["02"]* (Ax["E"]*Ay["E"])
+                                              + 2 *  G["04"]*(Ax["me"]*Ay["me"] 
+                                                              + (Ax["me"]*(Ay["nu"]+Ay["R"]))
+                                                              + (Ay["me"]*(Ax["nu"]+Ax["R"])))
+                                              - 2 *  G["03"]*((Ax["nu"]+Ax["R"])*(Ay["E"]) 
+                                                              + (Ay["nu"]+Ay["R"])*(Ax["E"])
+                                                              + 2*Ax["me"]*Ay["E"]
+                                                              + 2*Ay["me"]*Ax["E"])
+                                              + G["09"] * Ax["M"]*Ay["M"]
+                                              + G["06"] * ((Ax["nu"]-Ax["R"])*(Ay["M"]) 
+                                                           + (Ay["nu"]-Ay["R"])*(Ax["M"])))
+                c = 1/tx*x**2 - 1/limit
 
 
-                #model.WC[WCy] = result1
-                #if model.t_half(element_name) >= limit:
-                #if np.absolute((result1 - result2)/(result1+result2))>1e-3:
-                if optim1.status == 2 and optim2.status == 2:
+                y = (-b + np.sqrt(b**2-4*a*c+0*1j))/(2*a)
+                y2 = (-b - np.sqrt(b**2-4*a*c+0*1j))/(2*a)
+
+
+                if y.imag == 0 and y2.imag == 0:
                     xplot.append(x)
-                    contour.append(result1)
-                    contour2.append(result2)
-                    #if result1 != result3 and result2 != result4:
-                    #    xplot2.append(x)
-                    #    contour3.append(result3)
-                    #    contour4.append(result4)
-                    model.WC[WCy] = contour[-1]
-                    model.WC[WCx] = xplot[-1]
-                #print(model.t_half(element_name))
-
-                #set WCs to 0 just to be save
-                model.WC[WCx] = 0
-                model.WC[WCy] = 0
+                    contour.append(y)
+                    contour2.append(y2)
 
 
 
@@ -230,34 +256,48 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
             #plt.plot(np.array(xplot)*1e+9, np.array(contour), "b-", linewidth = 2)
             #plt.plot(np.array(xplot)*1e+9, np.array(contour2), "r-", linewidth = 2)
             print(len(contour))
+            
             if WCx == "m_bb":
                 plt.xlabel(r"$m_{\beta\beta}$ [eV]", fontsize = 20)
-                plt.ylabel(WCy, fontsize = 20)
+                plt.ylabel(r"$C_{"+WCy[:-3]+"}^{"+WCy[-3:]+"}$", fontsize = 20)
                 #plt.plot(np.array(xplot)*1e+9, np.array(contour), "b-", linewidth = linewidth)
                 #plt.plot(np.array(xplot)*1e+9, np.array(contour2), "b-", linewidth = linewidth)
                 plt.fill_between(np.array(xplot)*1e+9, np.array(contour), np.array(contour2), #label=experiment, 
-                                 alpha=np.min([1/(2*n_vary), 1/(2*len(experiments))]))#, color="b")
+                                 alpha=np.min([1/(2*n_vary), 1/(2*len(experiments))]), color=colors[exp_idx])
                 #plt.fill_between(np.array(xplot2)*1e+9, np.array(contour3), np.array(contour4), #color = "c", 
                 #                 label=experiment)
             elif WCy == "m_bb":
                 plt.ylabel(r"$m_{\beta\beta}$ [eV]", fontsize = 20)
-                plt.xlabel(WCx, fontsize = 20)
+                plt.xlabel(r"$C_{"+WCx[:-3]+"}^{"+WCx[-3:]+"}$", fontsize = 20)
                 #plt.plot(np.array(xplot), np.array(contour)*1e+9, "b-", linewidth = linewidth)
                 #plt.plot(np.array(xplot), np.array(contour2)*1e+9, "b-", linewidth = linewidth)
                 plt.fill_between(np.array(xplot), np.array(contour)*1e+9, np.array(contour2)*1e+9, #label=experiment, 
-                                 alpha=np.min([1/(2*n_vary), 1/(2*len(experiments))]))#, color="b")
+                                 alpha=np.min([1/(2*n_vary), 1/(2*len(experiments))]), color=colors[exp_idx])
                 #plt.fill_between(np.array(xplot2), np.array(contour3)*1e+9, np.array(contour4)*1e+9, color = "c", label=experiment)
             else:
-                plt.xlabel(WCx, fontsize = 20)
-                plt.ylabel(WCy, fontsize = 20)
-                #plt.plot(np.array(xplot), np.array(contour), "b-", linewidth = linewidth)
-                #plt.plot(np.array(xplot), np.array(contour2), "b-", linewidth = linewidth)
-                plt.fill_between(np.array(xplot), np.array(contour), np.array(contour2), #label=experiment, 
-                                 alpha=np.min([1/(2*n_vary), 1/(2*len(experiments))]))#, color="b")
-                #plt.fill_between(np.array(xplot2), np.array(contour3), np.array(contour4), color = "c", 
-                #                
+                if is_SMEFT:
+                    xdimension = int(WCx[-2])
+                    ydimension = int(WCy[-2])
+                    plt.xlabel(r"$C_{"+WCx[:-3]+"}^{"+WCx[-3:]+"}$ [TeV$^-"+str(xdimension-4)+"$]", fontsize = 20)
+                    plt.ylabel(r"$C_{"+WCy[:-3]+"}^{"+WCy[-3:]+"}$ [TeV$^-"+str(ydimension-4)+"$]", fontsize = 20)
+                    plt.fill_between((1e+3)**(xdimension-4)*np.array(xplot), 
+                                     (1e+3)**(ydimension-4)*np.array(contour), 
+                                     (1e+3)**(ydimension-4)*np.array(contour2), #label=experiment, 
+                                     alpha=np.min([1/(2*n_vary), 1/(2*len(experiments))]), color=colors[exp_idx])
+                else:
+                    plt.xlabel(r"$C_{"+WCx[:-3]+"}^{"+WCx[-3:]+"}$", fontsize = 20)
+                    plt.ylabel(r"$C_{"+WCy[:-3]+"}^{"+WCy[-3:]+"}$", fontsize = 20)
+                    #plt.plot(np.array(xplot), np.array(contour), "b-", linewidth = linewidth)
+                    #plt.plot(np.array(xplot), np.array(contour2), "b-", linewidth = linewidth)
+                    plt.fill_between(np.array(xplot), np.array(contour), np.array(contour2), #label=experiment, 
+                                     alpha=np.min([1/(2*n_vary), 1/(2*len(experiments))]), color=colors[exp_idx])
+                    #plt.fill_between(np.array(xplot2), np.array(contour3), np.array(contour4), color = "c", 
+                    #                 label=experiment)              
     if WCx == "m_bb":
         plt.xlim([x_min*1e+9, x_max*1e+9])
+    elif is_SMEFT:
+        plt.xlim([x_min*1e+3**(xdimension-4), x_max*1e+3**(xdimension-4)])
+        
     else:
         plt.xlim([x_min, x_max])
        
@@ -270,11 +310,14 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
     
     plt.rc("ytick", labelsize = 15)
     plt.rc("xtick", labelsize = 15)
+    plt.tight_layout()
     if savefig:
         if file == None:
             file = "contours_"+WCx+"_"+WCy+".png"
         plt.savefig(file)
         
 
+    #print(optim1)
     return(fig)
+
 
