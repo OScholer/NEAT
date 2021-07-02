@@ -25,7 +25,7 @@ u_to_GeV = pc["atomic mass constant energy equivalent in MeV"][0]/1000
 
 
 SMEFT_WCs = {#dim5                    #Wilson Coefficients of SMEFT
-             "LLHH"      : 0,         #up to dimension 7. We only 
+             "LH(5)"      : 0,         #up to dimension 7. We only 
              #dim7                    #list the operators violating
              "LH(7)"     : 0,         #lepton number by 2 units.
              "LHD1(7)"   : 0,
@@ -3404,7 +3404,7 @@ class LEFT(object):
     def plot_t_half_inv_scatter(self, vary_WC = "m_min", vary_phases = True, vary_LECs=False, experiments=None, n_points=10000, 
                                 save = False, file="t_half_scatter.png", alpha_plot=1, element_name = "76Ge", 
                                 x_min=1e-4, x_max = 1, y_min = None, y_max = None, cosmo=True, m_cosmo = 0.15, 
-                                compare_to_mass = False, normalize_to_mass = False):
+                                compare_to_mass = False, normalize_to_mass = False, ordering = None):
         #m_N = 0.93
         if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
             print("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
@@ -3639,7 +3639,7 @@ class SMEFT(object):
         self.use_unknown_LECs = use_unknown_LECs   #Use unknown LECs or not
         
         self.SMEFT_WCs = {#dim5                    #Wilson Coefficients of SMEFT
-                          "LLHH"      : 0,         #up to dimension 9. We only 
+                          "LH(5)"      : 0,         #up to dimension 9. We only 
                           #dim7                    #list the operators violating
                           "LH(7)"     : 0,         #lepton number by 2 units.
                           "LHD1(7)"   : 0,         #at dim9 we only list operators
@@ -3999,7 +3999,7 @@ class SMEFT(object):
                     "9(9)":0,"9(9)prime":0}
         
         #dim 5 matching
-        LEFT_WCs["m_bb"] = -vev**2 * WC["LLHH"] - vev**4/2 * WC["LH(7)"]
+        LEFT_WCs["m_bb"] = -vev**2 * WC["LH(5)"] - vev**4/2 * WC["LH(7)"]
         
         #LEFT_WCs["VL(6)"] = -vev**3*V_ud*(  1j/np.sqrt(2) * self.C_LHDe(scale) 
         #                                  + 4*m_e/vev     * self.C_LHW(scale))
@@ -4108,7 +4108,20 @@ class SMEFT(object):
     def set_LECs(self, use_unknown_LECs):
         self.use_unknown_LECs = unknown_LECs
         
-    def half_lives(self, WC = None, use_unknown_LECs = None, method = None, printing = True):
+    def t_half(self, element_name, WC = None, method = None):
+        if WC == None:
+            WC = self.WC.copy()
+        if method == None:
+            method = self.method
+        elif method not in ["IBM2", "QRPA", "SM"]:
+            print("Method",method,"is unavailable. Keeping current method",self.method)
+        else:
+            pass
+        LEFT_WCs = self.LEFT_matching(WC)
+        model = LEFT(LEFT_WCs, method = method)
+        return(model.t_half(element_name))
+        
+    def half_lives(self, WC = None, use_unknown_LECs = None, method = None):#, printing = True):
         if WC == None:
             WC = self.WC.copy()
         if use_unknown_LECs == None:
@@ -4127,8 +4140,8 @@ class SMEFT(object):
         #if printing:
         #    print("... solving RGEs ...")
         LEFT_WCs = self.LEFT_matching(WC)
-        if printing:
-            print("... matching onto LEFT ...")
+        #if printing:
+        #    print("... matching onto LEFT ...")
         model = LEFT(LEFT_WCs, use_unknown_LECs = use_unknown_LECs, method = method)
         return(model.half_lives())
     
@@ -4199,7 +4212,7 @@ class SMEFT(object):
             limit = np.sqrt(hl/half_live)
             #if limit != 1:
             result[WC_name] = limit
-            if WC_name == "LLHH":
+            if WC_name == "LH(5)":
                 dimension = 5
             else:
                 dimension = int(WC_name[-2])
@@ -4241,7 +4254,7 @@ class SMEFT(object):
             limit = np.absolute(optimize.root(t_half_optimize, args=(WC_name, element_name), x0=1e-15).x[0])
             if limit != 1e-15:
                 result[WC_name] = limit
-                if WC_name == "LLHH":
+                if WC_name == "LH(5)":
                     dimension = 5
                 else:
                     dimension = int(WC_name[-2])
