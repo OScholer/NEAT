@@ -9,7 +9,7 @@ import functions as f
 #st.write("Hello")
 
 st.title("NUPY")
-st.markdown('If you use this tool please cite **arxiv:xxxx.xxxx**. <br>You can download the full code from <a href = "https://github.com">gitHub</a> for advanced use cases.<br> You have any suggestions/comments on how to improve the tool?<br> => Contact scholer@mpi-hd.mpg.de', unsafe_allow_html=True)
+st.markdown('If you use this tool please cite **arxiv:xxxx.xxxx**. <br>You can download the full code from <a href = "https://github.com">gitHub</a> for advanced use cases.<br> You have any suggestions/comments on how to improve the tool?<br> => Contact:lukas.graf@mpi-hd.mpg.de<br> scholer@mpi-hd.mpg.de', unsafe_allow_html=True)
 path_option = st.selectbox("Choose what you want to do:", options = ["-", "Define a model", "Study operator limits"])
 
 
