@@ -1544,9 +1544,10 @@ class LEFT(object):
                             self.LEC[LEC] = random_LEC
                         else:
                             #random_LEC = variation_range*2*(np.random.rand()-0.5)*LECs[LEC]
-                            random_LEC = np.random.choice([1,-1])*((np.log10(10)-
-                                                                    np.log10(1))*np.random.rand()+np.log10(1))*LECs[LEC]
-                            self.LEC[LEC] = random_LEC
+                            random_LEC = (np.random.choice([1,-1])
+                                          *((np.sqrt(10)-1/np.sqrt(10))
+                                            *np.random.rand()+1/np.sqrt(10))*LECs[LEC])
+                        self.LEC[LEC] = random_LEC
                     #set LECs that depend on others
                     self.LEC["VpiN"] = self.LEC["6piN"] + self.LEC["8piN"]
                     self.LEC["tildeVpiN"] = self.LEC["7piN"] + self.LEC["9piN"]
@@ -1726,6 +1727,8 @@ class LEFT(object):
             plt.ylim(0, 1.05*max(spec))
         plt.rc("ytick", labelsize = 20)
         plt.rc("xtick", labelsize = 20)
+        plt.xlabel(r"$\overline{\epsilon}$", fontsize = 20)
+        plt.ylabel(r"$\frac{\mathrm{d}\Gamma}{\mathrm{d}\epsilon}$", fontsize = 20)
         if addgrid:
             plt.grid(linestyle = "--")
         if save:
@@ -1791,6 +1794,8 @@ class LEFT(object):
         plt.ylim(-1,1)
         plt.rc("ytick", labelsize = 20)
         plt.rc("xtick", labelsize = 20)
+        plt.xlabel(r"$\overline{\epsilon}$", fontsize = 20)
+        plt.ylabel(r"$\frac{a_1}{a_0}$", fontsize = 20)
         if addgrid:
             plt.grid(linestyle = "--")
         if save:
@@ -1988,6 +1993,8 @@ class LEFT(object):
     
     #fancy plots:
     def _m_bb(self, alpha, m_min=1, ordering="NO", dcp=1.36):
+        #this function returns m_bb from m_min
+        
         #majorana phases
         alpha1=alpha[0]
         alpha2=alpha[1]
@@ -2013,8 +2020,8 @@ class LEFT(object):
 
         #mixing angles
         s12 = np.sqrt(0.307)
-        s23 = np.sqrt(0.545)
-        s13 = np.sqrt(2.18e-2)
+        s23 = np.sqrt(0.546)
+        s13 = np.sqrt(2.2e-2)
 
         c12 = np.cos(np.arcsin(s12))
         c23 = np.cos(np.arcsin(s23))
@@ -2039,8 +2046,17 @@ class LEFT(object):
             return(m_BB_IO)
         else:
             return(m_BB_NO,m_BB_IO)
-    def _m_eff(self, alpha, m_min=1, ordering="both", dcp=1.36, 
-               element_name = "76Ge", normalize_to_mass = False, vary_WC  = "m_min"):
+        
+        
+    def _m_eff(self, 
+               alpha,                     #complex phase of variational WC or if vary_WC == "m_min" this is an array of both majorana phases
+               m_min=1,                   #absolute value of variational WC
+               ordering="both",           #mass ordering either NO, IO or both
+               dcp=1.36,                  #dirac cp phase
+               element_name = "76Ge",     #name of the isotope
+               normalize_to_mass = False, #return value normalized to the standard mass mechanism
+               vary_WC  = "m_min"         #variational WC
+              ):
         m_bb_backup = self.WC["m_bb"]
         WC_backup = self.WC.copy()
         #majorana phases
@@ -2106,8 +2122,8 @@ class LEFT(object):
 
             #mixing angles
             s12 = np.sqrt(0.307)
-            s23 = np.sqrt(0.545)
-            s13 = np.sqrt(2.18e-2)
+            s23 = np.sqrt(0.546)
+            s13 = np.sqrt(2.2e-2)
 
             c12 = np.cos(np.arcsin(s12))
             c23 = np.cos(np.arcsin(s23))
@@ -2171,8 +2187,15 @@ class LEFT(object):
     
     
     
-    def _m_eff_minus(self, alpha, m_min=1, ordering="both", dcp=1.36, 
-                     element_name = "76Ge", normalize_to_mass = False, vary_WC  = "m_min"):
+    def _m_eff_minus(self, 
+                     alpha,                     #complex phase of variational WC or if vary_WC == "m_min" this is an array of both majorana phases
+                     m_min=1,                   #absolute value of variational WC
+                     ordering="both",           #mass ordering either NO, IO or both
+                     dcp=1.36,                  #dirac cp phase
+                     element_name = "76Ge",     #name of the isotope
+                     normalize_to_mass = False, #return value normalized to the standard mass mechanism
+                     vary_WC  = "m_min"         #variational WC
+                    ):
         m_bb_backup = self.WC["m_bb"]
         WC_backup = self.WC.copy()
         #majorana phases
@@ -2204,8 +2227,8 @@ class LEFT(object):
 
             #mixing angles
             s12 = np.sqrt(0.307)
-            s23 = np.sqrt(0.545)
-            s13 = np.sqrt(2.18e-2)
+            s23 = np.sqrt(0.546)
+            s13 = np.sqrt(2.2e-2)
 
             c12 = np.cos(np.arcsin(s12))
             c23 = np.cos(np.arcsin(s23))
@@ -2269,6 +2292,8 @@ class LEFT(object):
     
     
     def _m_bb_minus(self, alpha, m_min=1, ordering="both", dcp=1.36):
+        #this function returns -m_bb from m_min
+        
         #majorana phases
         alpha1=alpha[0]
         alpha2=alpha[1]
@@ -2294,14 +2319,14 @@ class LEFT(object):
 
         #mixing angles
         s12 = np.sqrt(0.307)
-        s23 = np.sqrt(0.545)
-        s13 = np.sqrt(2.18e-2)
+        s23 = np.sqrt(0.546)
+        s13 = np.sqrt(2.2e-2)
 
         c12 = np.cos(np.arcsin(s12))
         c23 = np.cos(np.arcsin(s23))
         c13 = np.cos(np.arcsin(s13))
 
-        #mixing marix
+        #mixing matrix
         U = np.array([[c12*c13, s12*c13, s13*np.exp(-1j*dcp)], 
                        [-s12*c23-c12*s23*s13*np.exp(1j*dcp), c12*c23-s12*s23*s13*np.exp(1j*dcp), s23*c13], 
                        [s12*s23-c12*c23*s13*np.exp(1j*dcp), -c12*s23-s12*c23*s13*np.exp(1j*dcp), c23*c13]])
@@ -2329,11 +2354,15 @@ class LEFT(object):
         
 
         #the neutrino mass from the model needs to be overwritten to be able to produce the plot
-        #this is because for the plot we wanto to vary m_min!
+        #this is because for the plot we want to be able to vary m_min!
+        
+        #first we do a backup of the WCs to restore them at the end
         m_bb_backup = self.WC["m_bb"]
         WC_backup = self.WC.copy()
         if vary_WC  == "m_min":
             self.WC["m_bb"] = 0
+            
+        #alternatively of the variational WC is not m_min you need to set the corresponding WC to 0
         else:
             self.WC[vary_WC ] = 0
 
@@ -2352,8 +2381,8 @@ class LEFT(object):
             else:
                 pre_alpha = 1
             #get minimal and maximal m_bb by varying phases
-            NO_min = (scipy.optimize.minimize(self._m_bb, x0=pre_alpha,args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
-            NO_max = (-scipy.optimize.minimize(self._m_bb_minus, x0=pre_alpha,args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+            NO_min = (scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+            NO_max = (-scipy.optimize.minimize(self._m_eff_minus, x0=pre_alpha,args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
 
             self.WC["m_bb"] = NO_min*1e-9
             #NO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
@@ -2374,8 +2403,8 @@ class LEFT(object):
             else:
                 pre_alpha = 1
             #get minimal and maximal m_bb by varying phases
-            IO_min = (scipy.optimize.minimize(m_bb, x0=pre_alpha,args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
-            IO_max = (-scipy.optimize.minimize(m_bb_minus, x0=pre_alpha,args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+            IO_min = (scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+            IO_max = (-scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
 
             self.WC["m_bb"] = IO_min*1e-9
             #IO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
@@ -2603,10 +2632,25 @@ class LEFT(object):
             plt.savefig("m_eff.png", dpi=300)
         return(fig)
     
-    def _t_half(self, alpha, m_min, ordering="NO", dcp=1.36, 
-              element_name="76Ge", normalize_to_mass = False):
+    def _t_half(self, 
+                alpha, 
+                m_min,                     #value of variational parameter
+                ordering="NO",             #NO or IO
+                dcp=1.36,                  #cp-phase dirac neutrinos
+                element_name = "76Ge",     #isotope to calculate
+                normalize_to_mass = False, #return value normalized to the standard mass mechanism
+                vary_WC  = "m_min"
+               ):
+        WC_backup = self.WC.copy()
         m_bb_backup = self.WC["m_bb"]
-        self.WC["m_bb"] = self._m_bb(alpha=alpha, m_min=m_min, ordering=ordering, dcp=dcp)*1e-9
+        if vary_WC == "m_min":
+            self.WC["m_bb"] = self._m_bb(alpha=alpha, m_min=m_min, ordering=ordering, dcp=dcp)*1e-9
+        else:
+            if vary_WC == "m_bb":
+                factor = 1e-9
+            else:
+                factor = 1
+            self.WC[vary_WC] = np.exp(1j*alpha)*m_min*factor
         t_half = self.t_half(element_name=element_name)
         if normalize_to_mass:
             WCbackup = self.WC.copy()
@@ -2616,12 +2660,31 @@ class LEFT(object):
             t_half_mbb = self.t_half(element_name=element_name)
             t_half/=t_half_mbb
             self.WC = WCbackup.copy()
+        self.WC = WC_backup.copy()
         self.WC["m_bb"]=m_bb_backup
         return(t_half)
-    def _t_half_minus(self, alpha, m_min, ordering="NO", dcp=1.36, 
-              element_name="76Ge", normalize_to_mass = False):
+    
+    def _t_half_minus(self, 
+                      alpha, 
+                      m_min,                     #value of variational parameter
+                      ordering="NO",             #NO or IO
+                      dcp=1.36,                  #cp-phase dirac neutrinos
+                      element_name = "76Ge",     #isotope to calculate
+                      normalize_to_mass = False, #return value normalized to the standard mass mechanism
+                      vary_WC  = "m_min"
+                     ):
+        WC_backup = self.WC.copy()
+        
+        
         m_bb_backup = self.WC["m_bb"]
-        self.WC["m_bb"] =self._m_bb(alpha=alpha, m_min=m_min, ordering=ordering, dcp=dcp)*1e-9
+        if vary_WC == "m_min":
+            self.WC["m_bb"] = self._m_bb(alpha=alpha, m_min=m_min, ordering=ordering, dcp=dcp)*1e-9
+        else:
+            if vary_WC == "m_bb":
+                factor = 1e-9
+            else:
+                factor = 1
+            self.WC[vary_WC] = np.exp(1j*alpha)*m_min*factor
         t_half = self.t_half(element_name=element_name)
         if normalize_to_mass:
             WCbackup = self.WC.copy()
@@ -2631,26 +2694,45 @@ class LEFT(object):
             t_half_mbb = self.t_half(element_name=element_name)
             t_half/=t_half_mbb
             self.WC = WCbackup.copy()
+        self.WC = WC_backup.copy()
         self.WC["m_bb"]=m_bb_backup
         return(-t_half)
-    def _t_half_minmax(self, m_min, ordering="both", dcp=1.36, element_name="76Ge", numerical_method="powell", tol=None, normalize_to_mass = False):
+    
+    def _t_half_minmax(self, 
+                       m_min, 
+                       ordering="both", 
+                       dcp=1.36, 
+                       element_name="76Ge", 
+                       numerical_method="powell",
+                       tol=None, 
+                       normalize_to_mass = False, 
+                       vary_WC  = "m_min"
+                      ):
+        
+        if vary_WC == "m_min":
+            pre_alpha = [1,0]
+        else:
+            pre_alpha = 1
         if ordering == "NO":
-            t_half_min_NO = (scipy.optimize.minimize(self._t_half, x0=[1,0], args=(m_min, ordering, dcp, element_name, normalize_to_mass), method=numerical_method, tol=tol)["fun"])
-            t_half_max_NO = (scipy.optimize.minimize(self._t_half_minus, x0=[1,0], args=(m_min, ordering, dcp, element_name, normalize_to_mass), method=numerical_method, tol=tol)["fun"])
+            t_half_min_NO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, ordering, dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+            t_half_max_NO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, ordering, dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
             return([t_half_min_NO, t_half_max_NO])
 
         elif ordering == "IO":
-            t_half_min_IO = (scipy.optimize.minimize(self._t_half, x0=[1,0], args=(m_min, ordering, dcp, element_name, normalize_to_mass), method=numerical_method, tol=tol)["fun"])
-            t_half_max_IO = (scipy.optimize.minimize(self._t_half_minus, x0=[1,0], args=(m_min, ordering, dcp, element_name, normalize_to_mass), method=numerical_method, tol=tol)["fun"])
+            t_half_min_IO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, ordering, dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+            t_half_max_IO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, ordering, dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
             return([t_half_min_IO, t_half_max_IO])
 
         else:
-            t_half_min_NO = (scipy.optimize.minimize(self._t_half, x0=[1,0], args=(m_min, "NO", dcp, element_name, normalize_to_mass), method=numerical_method, tol=tol)["fun"])
-            t_half_max_NO = (scipy.optimize.minimize(self._t_half_minus, x0=[1,0], args=(m_min, "NO", dcp, element_name, normalize_to_mass), method=numerical_method, tol=tol)["fun"])
-
-            t_half_min_IO = (scipy.optimize.minimize(self._t_half, x0=[1,0], args=(m_min, "IO", dcp, element_name, normalize_to_mass), method=numerical_method, tol=tol)["fun"])
-            t_half_max_IO = (scipy.optimize.minimize(self._t_half_minus, x0=[1,0], args=(m_min, "IO", dcp, element_name, normalize_to_mass), method=numerical_method, tol=tol)["fun"])
-            return([t_half_min_NO, t_half_max_NO], [t_half_min_IO, t_half_max_IO])
+            t_half_min_NO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+            t_half_max_NO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+            if vary_WC == "m_min":
+                t_half_min_IO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+                t_half_max_IO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+                return([t_half_min_NO, t_half_max_NO], [t_half_min_IO, t_half_max_IO])
+            else:
+                return([t_half_min_NO, t_half_max_NO])
+                
         
     def plot_t_half_inv(self, m_cosmo = 0.15, x_min = 1e-4, x_max = 1e+0, y_min=None, y_max=None, n_dots = 100, 
                    element_name = "76Ge", cosmo = True, experiments = None, ordering="both", savefig=True, dcp=1.36,
@@ -2673,24 +2755,49 @@ class LEFT(object):
             IO_max_mbb = np.zeros(n_dots)
 
         for idx in range(n_dots):
-            m_min = M[idx]
-            [NO_min[idx], NO_max[idx]], [IO_min[idx], IO_max[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                  element_name=element_name, ordering=ordering, 
-                                                                                   dcp=dcp, numerical_method=numerical_method, 
-                                                                                         normalize_to_mass = normalize_to_mass)
-            if compare_to_mass:
-                WCbackup = self.WC.copy()
-                for operator in self.WC:
-                    self.WC[operator] = 0
+            if vary_WC == "m_min":
+                m_min = M[idx]
+                [NO_min[idx], NO_max[idx]], [IO_min[idx], IO_max[idx]] = self._t_half_minmax(m_min=m_min, 
+                                                                                      element_name=element_name, ordering=ordering, 
+                                                                                       dcp=dcp, numerical_method=numerical_method, 
+                                                                                             normalize_to_mass = normalize_to_mass, 
+                                                                                             vary_WC = vary_WC)
+                if compare_to_mass:
+                    WCbackup = self.WC.copy()
+                    for operator in self.WC:
+                        self.WC[operator] = 0
+
+                    [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
+                                                                                          element_name=element_name, 
+                                                                                                                 ordering=ordering, 
+                                                                                                                 dcp=dcp,
+                                                                                                                  numerical_method=numerical_method, 
+                                                                                             normalize_to_mass = normalize_to_mass, 
+                                                                                             vary_WC = vary_WC)
+
+                    self.WC = WCbackup.copy()
                     
-                [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                      element_name=element_name, 
-                                                                                                             ordering=ordering, 
-                                                                                                             dcp=dcp,
-                                                                                                              numerical_method=numerical_method, 
-                                                                                         normalize_to_mass = normalize_to_mass)
-                
-                self.WC = WCbackup.copy()
+            else:
+                m_min = M[idx]
+                [NO_min[idx], NO_max[idx]] = self._t_half_minmax(m_min=m_min, 
+                                                                                      element_name=element_name, ordering=ordering, 
+                                                                                       dcp=dcp, numerical_method=numerical_method, 
+                                                                                             normalize_to_mass = normalize_to_mass, 
+                                                                                             vary_WC = vary_WC)
+                if compare_to_mass:
+                    WCbackup = self.WC.copy()
+                    for operator in self.WC:
+                        self.WC[operator] = 0
+
+                    [NO_min_mbb[idx], NO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
+                                                                                          element_name=element_name, 
+                                                                                                                 ordering=ordering, 
+                                                                                                                 dcp=dcp,
+                                                                                                                  numerical_method=numerical_method, 
+                                                                                             normalize_to_mass = normalize_to_mass, 
+                                                                                             vary_WC = vary_WC)
+
+                    self.WC = WCbackup.copy()
 
         NO_min = 1/np.absolute(NO_min)
         NO_max = 1/np.absolute(NO_max)
@@ -2713,10 +2820,16 @@ class LEFT(object):
             #    IO_min -=1
             #    IO_max -=1
         if y_max == None:
-            y_max = np.max([np.max(IO_max), np.max(NO_max)])
+            if vary_WC == "m_min":
+                y_max = np.max([np.max(IO_max), np.max(NO_max)])
+            else:
+                y_max = np.max(NO_max)
             y_max = 10**np.ceil(np.log10(y_max))
         if y_min == None:
-            y_min = 1e-7*y_max
+            if vary_WC == "m_min":
+                y_min = np.max([10**np.floor(np.log10(np.min([np.min(NO_max), np.min(IO_max)]))),1e-8*y_max])
+            else:
+                y_min = np.max([10**np.floor(np.log10(np.min(NO_max))),1e-8*y_max])
             #y_min = 10**np.round(np.log10(y_min))
 
         fig = plt.figure(figsize=(9,8))
@@ -2744,12 +2857,19 @@ class LEFT(object):
         plt.xscale("log")
         plt.ylim(y_min,y_max)
         plt.xlim(x_min,x_max)
-        plt.legend(fontsize=20)
+        if vary_WC == "m_min":
+            plt.legend(fontsize=20)
         if normalize_to_mass:
             plt.ylabel(r"$\frac{t_{1/2, m_{\beta\beta}}}{t_{1/2}}$", fontsize=20)
         else:
             plt.ylabel(r"$t_{1/2}^{-1}$ [yr$^{-1}$]", fontsize=20)
-        plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
+        if vary_WC == "m_min":
+            plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
+        else:
+            if vary_WC == "m_bb":
+                plt.xlabel(r"$|m_{\beta\beta}|$ [eV]", fontsize=20)
+            else:
+                plt.xlabel(r"$|C_{"+vary_WC[:-3]+"}^{"+vary_WC[-3:]+"}|$", fontsize=20)
         plt.tight_layout()
         if cosmo:
             def m_sum(m_min):
@@ -2791,20 +2911,40 @@ class LEFT(object):
 
         for idx in range(n_dots):
             m_min = M[idx]
-            [NO_min[idx], NO_max[idx]], [IO_min[idx], IO_max[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                  element_name=element_name, ordering=ordering, 
-                                                                                   dcp=dcp, numerical_method=numerical_method,
-                                                                                         normalize_to_mass = normalize_to_mass)
-            if compare_to_mass:
-                WCbackup = self.WC.copy()
-                for operator in self.WC:
-                    self.WC[operator] = 0
-                    
-                [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
+            if vary_WC == "m_min":
+                [NO_min[idx], NO_max[idx]], [IO_min[idx], IO_max[idx]] = self._t_half_minmax(m_min=m_min, 
                                                                                       element_name=element_name, ordering=ordering, 
-                                                                                       dcp=dcp, numerical_method=numerical_method, normalize_to_mass = normalize_to_mass)
-                
-                self.WC = WCbackup.copy()
+                                                                                       dcp=dcp, numerical_method=numerical_method,
+                                                                                             normalize_to_mass = normalize_to_mass, 
+                                                                                             vary_WC = vary_WC)
+                if compare_to_mass:
+                    WCbackup = self.WC.copy()
+                    for operator in self.WC:
+                        self.WC[operator] = 0
+
+                    [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
+                                                                                          element_name=element_name, ordering=ordering, 
+                                                                                           dcp=dcp, numerical_method=numerical_method, normalize_to_mass = normalize_to_mass, 
+                                                                                             vary_WC = vary_WC)
+
+                    self.WC = WCbackup.copy()
+            else:
+                [NO_min[idx], NO_max[idx]] = self._t_half_minmax(m_min=m_min, 
+                                                                                      element_name=element_name, ordering=ordering, 
+                                                                                       dcp=dcp, numerical_method=numerical_method,
+                                                                                             normalize_to_mass = normalize_to_mass, 
+                                                                                             vary_WC = vary_WC)
+                if compare_to_mass:
+                    WCbackup = self.WC.copy()
+                    for operator in self.WC:
+                        self.WC[operator] = 0
+
+                    [NO_min_mbb[idx], NO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
+                                                                                          element_name=element_name, ordering=ordering, 
+                                                                                           dcp=dcp, numerical_method=numerical_method, normalize_to_mass = normalize_to_mass, 
+                                                                                             vary_WC = vary_WC)
+
+                    self.WC = WCbackup.copy()
 
         NO_min = np.absolute(NO_min)
         NO_max = np.absolute(NO_max)
@@ -2827,13 +2967,16 @@ class LEFT(object):
             #    IO_min -=1
             #    IO_max -=1
         if y_min == None:
-            y_min = np.min([np.min(IO_max), np.min(NO_max)])
+            if vary_WC == "m_min":
+                y_min = np.min([np.min(IO_max), np.min(NO_max)])
+            else:
+                y_min = np.min(NO_max)
             #y_min = 1e-7*y_max
             y_min = 10**np.floor(np.log10(y_min))
         if y_max == None:
             #y_max = np.max([np.max(IO_max), np.max(NO_max)])
             #y_max = 10**np.ceil(np.log10(y_max))
-            y_max = 1e+7*y_min
+            y_max = np.min([10**np.ceil(np.log10(np.max([NO_max, IO_max]))),1e+8*y_min])
 
         fig = plt.figure(figsize=(9,8))
         plt.plot(M,NO_min, "b")
@@ -2861,12 +3004,19 @@ class LEFT(object):
         plt.xscale("log")
         plt.ylim(y_min,y_max)
         plt.xlim(x_min,x_max)
-        plt.legend(fontsize=20)
+        if vary_WC == "m_min":
+            plt.legend(fontsize=20)
         if normalize_to_mass:
             plt.ylabel(r"$\frac{t_{1/2}}{t_{1/2, m_{\beta\beta}}}$", fontsize=20)
         else:
             plt.ylabel(r"$t_{1/2}$ [yr]", fontsize=20)
-        plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
+        if vary_WC == "m_min":
+            plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
+        else:
+            if vary_WC == "m_bb":
+                plt.xlabel(r"$|m_{\beta\beta}|$ [eV]", fontsize=20)
+            else:
+                plt.xlabel(r"$|C_{"+vary_WC[:-3]+"}^{"+vary_WC[-3:]+"}|$", fontsize=20)
         plt.tight_layout()
         if cosmo:
             def m_sum(m_min):
@@ -2912,9 +3062,9 @@ class LEFT(object):
                                       "6(9)", "7(9)"]
                 
                 #define labels for plots
-                WC_group_names = [r"$m_{\beta\beta}$"      , r"$C_{VL}^{(6)}$", 
+                WC_group_names = [r"$m_{\beta\beta}$"  , r"$C_{VL}^{(6)}$", 
                                   r"$C_{VR}^{(6)}$", r"$C_{T}^{(6)}$" , 
-                                  r"$C_{S6}}$", r"$C_{V7}$"     , r"$C_{1L}^{(9)}$", r"$C_{S1}^{(9)}$", 
+                                  r"$C_{S6}}$", r"$C_{V7}$", r"$C_{1L}^{(9)}$", r"$C_{S1}^{(9)}$", 
                                   r"$C_{S2}^{(9)}$", r"$C_{S3}^{(9)}$", r"$C_{4L}^{(9)}$",
                                   r"$C_{S4}^{(9)}$", r"$C_{5L}^{(9)}$", r"$C_{S5}^{(9)}$",
                                   r"$C_{V}^{(9)}$", r"$C_{\tilde{V}}^{(9)}$"]
@@ -3186,13 +3336,14 @@ class LEFT(object):
         return(fig)
         #return(forbidden_LECsNO, forbidden_LECsNOm, forbidden_LECsIO, forbidden_LECsIOm)
         
-    def plot_t_half_scatter(self, vary_WC = "m_min", vary_phases = True, vary_LECs=False, experiments=None, n_points=10000, 
+    def plot_t_half_scatter(self, vary_WC = "m_min", vary_phases = True, vary_LECs=False, experiments=None, n_dots=10000, 
                             save = False, file="t_half_scatter.png", alpha_plot=1, element_name = "76Ge", ordering = None, 
                             x_min=1e-4, x_max = 1, y_min = None, y_max = None, cosmo=True, m_cosmo  = 0.15, 
                             compare_to_mass = False, normalize_to_mass = False):
         #model = EFT.LEFT(WC)
         #m_N = 0.93
         #element_name = "76Ge"
+        n_points = n_dots
         if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
             print("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
@@ -3401,11 +3552,12 @@ class LEFT(object):
         if save == True:
             plt.savefig(file)
         return(fig)
-    def plot_t_half_inv_scatter(self, vary_WC = "m_min", vary_phases = True, vary_LECs=False, experiments=None, n_points=10000, 
+    def plot_t_half_inv_scatter(self, vary_WC = "m_min", vary_phases = True, vary_LECs=False, experiments=None, n_dots=10000, 
                                 save = False, file="t_half_scatter.png", alpha_plot=1, element_name = "76Ge", 
                                 x_min=1e-4, x_max = 1, y_min = None, y_max = None, cosmo=True, m_cosmo = 0.15, 
                                 compare_to_mass = False, normalize_to_mass = False, ordering = None):
         #m_N = 0.93
+        n_points = n_dots
         if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
             print("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
@@ -3601,7 +3753,7 @@ class LEFT(object):
             plt.ylabel(r"$\frac{t_{1/2, m_{\beta\beta}}}{t_{1/2}}$", fontsize=20)
         else:
             plt.ylabel(r"$t_{1/2}^{-1}$ [yr$^{-1}$]", fontsize=20)
-        plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
+        #plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
         plt.xlim(x_min,x_max)
         plt.ylim(y_min,y_max)
         if vary_WC == "m_min":
