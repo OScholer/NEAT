@@ -440,7 +440,7 @@ class LEFT(object):
     # the WCs are entered at the scale of M_W=80GeV
     # it can calculate the low energy observables of 0nuBB decay
     ################################################################
-    def __init__(self, WC, name = None, use_unknown_LECs = False, method = "SM", basis = "C"):
+    def __init__(self, WC, name = None, unknown_LECs = False, method = "IBM2", basis = "C"):
         
         self.method = method
         self.basis = basis
@@ -557,8 +557,8 @@ class LEFT(object):
         self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
         
         #Store the Low Energy Constants (LECs) required
-        self.use_unknown_LECs = use_unknown_LECs
-        if use_unknown_LECs == True:
+        self.unknown_LECs = unknown_LECs
+        if unknown_LECs == True:
             self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
                        "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
                        # all the below are expected to be order 1 in absolute magnitude
@@ -637,14 +637,14 @@ class LEFT(object):
         #list of corresponding names
         #I don't know why I didn't make a dict here...
         #self.element_names = list(self.elements.keys())
-        self.element_names = np.flip(list(self.NMEs.keys()))
+        self.isotope_names = np.flip(list(self.NMEs.keys()))
         
         
         
 
-    def set_LECs(self, use_unknown_LECs):
-        self.use_unknown_LECs = use_unknown_LECs
-        if use_unknown_LECs == True:
+    def set_LECs(self, unknown_LECs):
+        self.unknown_LECs = unknown_LECs
+        if unknown_LECs == True:
             self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
                        "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
                        # all the below are expected to be order 1 in absolute magnitude
@@ -1011,21 +1011,24 @@ class LEFT(object):
     #                                                                                                  #
     ####################################################################################################
         
-    def t_half(self, element_name, WC = None, method = None):
+    def t_half(self, isotope, WC = None, method = None):
         #set the method and import NMEs if necessary
         if method == None:
             method = self.method
             pass
         elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            print("Changing method to",method)
-            self.method = method
-            self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+            pass
+            #print("Using",method)
+            #self.method = method
+            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
         elif method not in ["IBM2", "QRPA", "SM"]:
             print("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
         else:
+            method = self.method
             pass
             
-        method = self.method
+        #method = self.method
 
 
         if WC == None:
@@ -1035,13 +1038,13 @@ class LEFT(object):
         #for operator in WC:
         #    WC[operator] *= 1e+6
         #Calculates the half-live for a given element and WCs
-        amp, M = self.amplitudes(element_name, WC)
-        element = self.elements[element_name]
+        amp, M = self.amplitudes(isotope, WC, method)
+        element = self.elements[isotope]
         
         g_A=self.LEC["A"]
         
         #G = PSFs[element]
-        G = self.to_G(element_name)
+        G = self.to_G(isotope)
         #m_e = pc["electron mass energy equivalent in MeV"][0]
 
         #Some PSFs need a rescaling due to different definitions in DOIs paper and 1806...
@@ -1065,27 +1068,40 @@ class LEFT(object):
         #return(1e+12*1/inverse_result)
         return(1/inverse_result)
     
-    def amplitudes(self, element_name, WC, method=None):
+    def amplitudes(self, isotope, WC = None, method=None):
     #calculate transition amplitudes as given in 1806.02780
         #set the method and import NMEs if necessary
         if method == None:
+            method = self.method
+            #generate NMEs that directly enter ME calculations
+            NME = self.NMEs[isotope][method].copy()
             pass
         elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            print("Changing method to",method)
-            self.method = method
-            self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+            #print("Changing method to",method)
+            #self.method = method
+            newNMEs, newNMEpanda, newNMEnames = Load_NMEs(method)
+            #generate NMEs that directly enter ME calculations
+            NME = newNMEs[isotope][method].copy()
         elif method not in ["IBM2", "QRPA", "SM"]:
             print("Method",method,"is unavailable. Keeping current method",self.method)
+            #generate NMEs that directly enter ME calculations
+            method = self.method
+            NME = self.NMEs[isotope][method].copy()
         else:
+            method = self.method
+            NME = self.NMEs[isotope][method].copy()
             pass
             
-        method = self.method
         #method = self.method
-        C = self.WC.copy()
-        for x in C:
-            C[x] = 0
-        for x in WC:
-            C[x] = WC[x]
+        #method = self.method
+        if WC == None:
+            C = self.WC.copy()
+        else:
+            C = self.WC.copy()
+            for x in C:
+                C[x] = 0
+            for x in WC:
+                C[x] = WC[x]
         LEC = self.LEC.copy()
 
         #Constants: all in GeV
@@ -1138,7 +1154,7 @@ class LEFT(object):
 
 
         #generate NMEs that directly enter ME calculations
-        NME = self.NMEs[element_name][method].copy()
+        #NME = self.NMEs[isotope][method].copy()
 
 
         #eq. 33
@@ -1249,22 +1265,22 @@ class LEFT(object):
         #return subamplitudes and MEs
         return (A, M)
 
-    def to_G(self, element_name):
+    def to_G(self, isotope):
         #transform imported PSFs into the necessary dict
         #format, which is used in the amplitudes function.
 
-        #bring element_name of the type 76Ge into the PSFpanda type ^{76}Ge
+        #bring isotope of the type 76Ge into the PSFpanda type ^{76}Ge
         try:
-            PSFs = self.PSFpanda[element_name]
+            PSFs = self.PSFpanda[isotope]
         except:
-            if element_name[-1] == "U" or element_name[-1] == "W":
-                element_name = r"$^{"+element_name[:-1]+ "}$" + element_name[-1:]
+            if isotope[-1] == "U" or isotope[-1] == "W":
+                isotope = r"$^{"+isotope[:-1]+ "}$" + isotope[-1:]
             else:
-                element_name = r"$^{"+element_name[:-2]+ "}$" + element_name[-2:]
+                isotope = r"$^{"+isotope[:-2]+ "}$" + isotope[-2:]
         #G = {element_name : {}}
         G = {}
-        for key in self.PSFpanda[element_name].keys():
-            G[key[-4:-2]] = self.PSFpanda[element_name][key]
+        for key in self.PSFpanda[isotope].keys():
+            G[key[-4:-2]] = self.PSFpanda[isotope][key]
         return(G)
     
     ####################################################################################################
@@ -1273,29 +1289,32 @@ class LEFT(object):
     #                                                                                                  #
     ####################################################################################################
     
-    def spectra(self, Ebar, amp=None, element_name = "76Ge", method=None):
+    def spectra(self, Ebar, isotope = "76Ge", method=None, amp=None):
         
         #set the method and import NMEs if necessary
         if method == None:
+            method = self.method
             pass
         elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            print("Changing method to",method)
-            self.method = method
-            self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+            pass
+            #print("Changing method to",method)
+            #self.method = method
+            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
         elif method not in ["IBM2", "QRPA", "SM"]:
             print("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
         else:
             pass
             
-        method = self.method
+        #method = self.method
         #calculates the single electron spectrum
         
         #get element class
-        element = self.elements[element_name]
+        element = self.elements[isotope]
         
         #if not initialized calculate amplitudes
         if amp == None:
-            amp = self.amplitudes(element_name, self.WC)[0]
+            amp = self.amplitudes(isotope, self.WC, method)[0]
         
         #electron mass in MeV
         #m_e = pc["electron mass energy equivalent in MeV"][0]
@@ -1323,29 +1342,33 @@ class LEFT(object):
                           + g_06_rescaling * element.g_06(E, Delta_M - E) * ((amp["nu"]-amp["R"])*np.conj(amp["M"])).real)* p(E)*p(Delta_M-E)* E * (Delta_M - E)
         return(result)
 
-    def angular_corr(self, Ebar, amp = None, element_name = "76Ge", method=None):
+    def angular_corr(self, Ebar, isotope = "76Ge", method=None, amp = None):
         
         #set the method and import NMEs if necessary
         if method == None:
+            method = self.method
             pass
         elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            print("Changing method to",method)
-            self.method = method
-            self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+            pass
+            #print("Changing method to",method)
+            #self.method = method
+            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
         elif method not in ["IBM2", "QRPA", "SM"]:
             print("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
         else:
+            method = self.method
             pass
             
-        method = self.method
+        #method = self.method
         #calculates the angular correlation coefficient for a given normalized energy Ebar
         
         #get element class
-        element = self.elements[element_name]
+        element = self.elements[isotope]
         
         #if not initialized calculate amplitudes
         if amp == None:
-            amp = self.amplitudes(element_name, self.WC)[0]
+            amp = self.amplitudes(isotope, self.WC, method)[0]
             
         #electron mass in MeV
         #m_e = pc["electron mass energy equivalent in MeV"][0]
@@ -1390,25 +1413,35 @@ class LEFT(object):
         
         ####################################################################################################
     '''
-    def half_lives(self, method = None, use_unknown_LECs = None):
+    def half_lives(self, WC = None, method = None):#, unknown_LECs = None):
+        if WC == None:
+            WC = self.WC.copy()
     #returns a pandas.DataFrame with all half-lives of the available isotopes for the considered NME method
-        if use_unknown_LECs != None and use_unknown_LECs != self.use_unknown_LECs:
-            self.set_LECs(use_unknown_LECs)
+        #if unknown_LECs != None and unknown_LECs != self.unknown_LECs:
+        #    self.set_LECs(unknown_LECs)
         if method == None:
+            method = self.method
+            NMEs = self.NMEs
             pass
         elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            print("Changing method to",method)
-            self.method = method
-            self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+            pass
+            #print("Changing method to",method)
+            #self.method = method
+            newNMEs, newNMEpanda, newNMEnames = Load_NMEs(method)
+            NMEs = newNMEs
         elif method not in ["IBM2", "QRPA", "SM"]:
             print("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
+            NMEs = self.NMEs
         else:
+            method = self.method
+            NMEs = self.NMEs
             pass
 
         hl = pd.DataFrame([], [r"$y$"])
-        for element_name in list(self.NMEs.keys()):
-            element = self.elements[element_name]
-            hl[element_name] = [self.t_half(element_name, self.WC)]
+        for isotope in list(NMEs.keys()):
+            element = self.elements[isotope]
+            hl[isotope] = [self.t_half(isotope, WC, method)]
         
         return(hl)
     
@@ -1444,8 +1477,8 @@ class LEFT(object):
         self.ratio_values = pd.DataFrame()
 
         #Generate a column for each isotope
-        for element_name in NMEs.keys():
-            self.ratio_values[element_name] = []
+        for isotope in NMEs.keys():
+            self.ratio_values[isotope] = []
 
         #Generate a column that contains the operator names -> set to index later
         self.ratio_values["Model"] = [self.name]
@@ -1453,8 +1486,8 @@ class LEFT(object):
         
         if vary:
             self.ratio_values_varried = {}
-            for element_name in NMEs.keys():
-                self.ratio_values_varried[element_name] = []
+            for isotope in NMEs.keys():
+                self.ratio_values_varried[isotope] = []
 
         #generate figure
         if plot:
@@ -1466,18 +1499,18 @@ class LEFT(object):
         labels = [""]
 
         #iterate over all elements
-        for element_name in NMEs.keys():#["76Ge", "82Se" , "130Te", "136Xe"]:
+        for isotope in NMEs.keys():#["76Ge", "82Se" , "130Te", "136Xe"]:
 
             ratio_list = []
 
-            #match element_name to element class
-            element = self.elements[element_name]
+            #match isotope to element class
+            element = self.elements[isotope]
 
             #get A from the element_name for the plot labels
-            if element_name[0] != "1" and element_name[0] != "2":
-                element_name_plot = element_name[0:2]
+            if isotope[0] != "1" and isotope[0] != "2":
+                isotope_plot = isotope[0:2]
             else:
-                element_name_plot = element_name[0:3]
+                isotope_plot = isotope[0:3]
 
             #set the color
             c = "b"
@@ -1491,11 +1524,11 @@ class LEFT(object):
             #t_half function is cleaner.
 
             #Store half lives for light nu exchange model
-            t_half_m_bb = self.t_half(element_name, WC_mbb)
+            t_half_m_bb = self.t_half(isotope, WC_mbb)
             t_half_m_bb_Ge = self.t_half(reference_isotope, WC_mbb)
 
             #calculate half lives for current model
-            t_half_model = self.t_half(element_name, self.WC)
+            t_half_model = self.t_half(isotope, self.WC)
             t_half_model_Ge = self.t_half(reference_isotope, self.WC)
 
             if normalized:
@@ -1506,9 +1539,9 @@ class LEFT(object):
 
 
             if plot:
-                plt.scatter(np.log10(ratio), element_name_plot, marker = m, color = c, s=150)
+                plt.scatter(np.log10(ratio), isotope_plot, marker = m, color = c, s=150)
 
-            self.ratio_values[element_name] = [ratio]
+            self.ratio_values[isotope] = [ratio]
             
             if vary:
                 #define unknown LECs to be varied over
@@ -1555,11 +1588,11 @@ class LEFT(object):
                     self.LEC["tildeVpiN"] = self.LEC["7piN"] + self.LEC["9piN"]
                     
                     #Store half lives for light nu exchange model
-                    t_half_m_bb = self.t_half(element_name, WC_mbb)
+                    t_half_m_bb = self.t_half(isotope, WC_mbb)
                     t_half_m_bb_Ge = self.t_half(reference_isotope, WC_mbb)
 
                     #calculate half lives for current model
-                    t_half_model = self.t_half(element_name, self.WC)
+                    t_half_model = self.t_half(isotope, self.WC)
                     t_half_model_Ge = self.t_half(reference_isotope, self.WC)
 
                     if normalized:
@@ -1569,9 +1602,9 @@ class LEFT(object):
                         ratio = t_half_model/t_half_model_Ge
                         
                     
-                    self.ratio_values_varried[element_name].append(ratio)
+                    self.ratio_values_varried[isotope].append(ratio)
                     if plot:
-                        plt.scatter(np.log10(ratio), element_name_plot, marker = ".", color = c, s=20, alpha = 0.25)
+                        plt.scatter(np.log10(ratio), isotope_plot, marker = ".", color = c, s=20, alpha = 0.25)
                     
                 #restore standard LECs
                 self.LEC = LEC_backup.copy()
@@ -1599,7 +1632,7 @@ class LEFT(object):
         return(self.ratio_values)
     
     
-    def PSF_plot(self, element_name="76Ge", save=False, method=None):
+    def PSF_plot(self, isotope="76Ge", save=False, method=None):
         #generates plots of the PSF observables
         #i.e. angular corr. and single e spectrum
         
@@ -1630,7 +1663,7 @@ class LEFT(object):
         epsilon = 1e-6
         
         #get element class
-        element = self.elements[element_name]
+        element = self.elements[isotope]
         
         #energy range for spectrum
         E = np.linspace(self.m_e_MEV+epsilon, element.Delta_M-self.m_e_MEV-epsilon, 1000)
@@ -1639,32 +1672,32 @@ class LEFT(object):
         Ebar = (E-self.m_e_MEV)/(element.Delta_M-2*self.m_e_MEV)
         
         #calculate amplitudes for a model and mass mechanism
-        Amplitude, _ = self.amplitudes(element_name, self.WC)
-        Amplitude_mbb, _ = self.amplitudes(element_name, WC_mbb)
+        Amplitude, _ = self.amplitudes(isotope, self.WC)
+        Amplitude_mbb, _ = self.amplitudes(isotope, WC_mbb)
         
         #normalization factors for single electron d
-        integral = integrate.quad(lambda E: self.spectra(E, Amplitude, element_name = element_name), 0, 1)
-        integral_mbb = integrate.quad(lambda E: self.spectra(E, Amplitude_mbb, element_name = element_name), 0, 1)
+        integral = integrate.quad(lambda E: self.spectra(E, Amplitude, isotope = isotope), 0, 1)
+        integral_mbb = integrate.quad(lambda E: self.spectra(E, Amplitude_mbb, isotope = isotope), 0, 1)
         
         #generate figures
         plt.figure()
         plt.title("Single Electron Spectrum")
-        plt.plot(Ebar, self.spectra(Ebar, amp = Amplitude, element_name = element_name)/integral[0], "b", label = r"$m_{\beta\beta}$")
-        plt.plot(Ebar, self.spectra(Ebar, amp = Amplitude_mbb, element_name = element_name)/integral_mbb[0], "r", label = self.name)
+        plt.plot(Ebar, self.spectra(Ebar, amp = Amplitude, isotope = isotope)/integral[0], "b", label = r"$m_{\beta\beta}$")
+        plt.plot(Ebar, self.spectra(Ebar, amp = Amplitude_mbb, isotope = isotope)/integral_mbb[0], "r", label = self.name)
         plt.legend(fontsize = 20)
         if save:
-            plt.savefig("spectra_"+element_name+"_"+self.name+".png", dpi = 300)
+            plt.savefig("spectra_"+isotope+"_"+self.name+".png", dpi = 300)
         
         plt.figure()
         plt.title("Angular Correlation")
-        plt.plot(Ebar, self.angular_corr(Ebar, amp = Amplitude_mbb, element_name = element_name), "b", label = r"$m_{\beta\beta}$")
-        plt.plot(Ebar, self.angular_corr(Ebar, amp = Amplitude, element_name = element_name), "r", label = self.name)
+        plt.plot(Ebar, self.angular_corr(Ebar, amp = Amplitude_mbb, isotope = isotope), "b", label = r"$m_{\beta\beta}$")
+        plt.plot(Ebar, self.angular_corr(Ebar, amp = Amplitude, isotope = isotope), "r", label = self.name)
         plt.legend()
         
         if save:
-            plt.savefig("angular_correlation_"+element_name+"_"+self.name+".png", dpi = 300)
+            plt.savefig("angular_correlation_"+isotope+"_"+self.name+".png", dpi = 300)
             
-    def plot_spec(self, element_name="76Ge", save=False, method=None, print_title = False, addgrid = True, show_mbb = True):
+    def plot_spec(self, isotope="76Ge", save=False, method=None, print_title = False, addgrid = True, show_mbb = True):
         #generates a plot of the single electron spectrum
         
         #set the method and import NMEs if necessary
@@ -1694,7 +1727,7 @@ class LEFT(object):
         epsilon = 1e-6
         
         #get element class
-        element = self.elements[element_name]
+        element = self.elements[isotope]
         
         #energy range for spectrum
         E = np.linspace(self.m_e_MEV+epsilon, element.Delta_M-self.m_e_MEV-epsilon, 1000)
@@ -1703,22 +1736,22 @@ class LEFT(object):
         Ebar = (E-self.m_e_MEV)/(element.Delta_M-2*self.m_e_MEV)
         
         #calculate amplitudes for a model and mass mechanism
-        Amplitude, _ = self.amplitudes(element_name, self.WC)
+        Amplitude, _ = self.amplitudes(isotope, self.WC)
         if show_mbb:
-            Amplitude_mbb, _ = self.amplitudes(element_name, WC_mbb)
+            Amplitude_mbb, _ = self.amplitudes(isotope, WC_mbb)
         
         #normalization factors for single electron spectra
-        integral = integrate.quad(lambda E: self.spectra(E, Amplitude, element_name = element_name), 0, 1)
+        integral = integrate.quad(lambda E: self.spectra(E, Amplitude, isotope = isotope), 0, 1)
         if show_mbb:
-            integral_mbb = integrate.quad(lambda E: self.spectra(E, Amplitude_mbb, element_name = element_name), 0, 1)
+            integral_mbb = integrate.quad(lambda E: self.spectra(E, Amplitude_mbb, isotope = isotope), 0, 1)
         
         #generate figures
         fig = plt.figure(figsize=(6.4*1.85, 4.8*2))
         if print_title:
             plt.title("Single Electron Spectrum")
-        spec = self.spectra(Ebar, amp = Amplitude, element_name = element_name)/integral[0]
+        spec = self.spectra(Ebar, amp = Amplitude, isotope = isotope)/integral[0]
         if show_mbb:
-            spec_mbb = self.spectra(Ebar, amp = Amplitude_mbb, element_name = element_name)/integral_mbb[0]
+            spec_mbb = self.spectra(Ebar, amp = Amplitude_mbb, isotope = isotope)/integral_mbb[0]
         if show_mbb:
             plt.plot(Ebar, spec_mbb, "r", label = r"$m_{\beta\beta}$")
         plt.plot(Ebar, spec, "b", label = self.name)
@@ -1735,10 +1768,10 @@ class LEFT(object):
         if addgrid:
             plt.grid(linestyle = "--")
         if save:
-            plt.savefig("spectra_"+element_name+"_"+self.name+".png", dpi = 300)
+            plt.savefig("spectra_"+isotope+"_"+self.name+".png", dpi = 300)
         return(fig)
             
-    def plot_corr(self, element_name="76Ge", save=False, method=None, print_title = False, addgrid = True, show_mbb = True):
+    def plot_corr(self, isotope="76Ge", save=False, method=None, print_title = False, addgrid = True, show_mbb = True):
         #generates a plot of the angular correlation coefficient
         
         
@@ -1769,7 +1802,7 @@ class LEFT(object):
         epsilon = 1e-6
         
         #get element class
-        element = self.elements[element_name]
+        element = self.elements[isotope]
         
         #energy range for spectrum
         E = np.linspace(self.m_e_MEV+epsilon, element.Delta_M-self.m_e_MEV-epsilon, 1000)
@@ -1778,17 +1811,17 @@ class LEFT(object):
         Ebar = (E-self.m_e_MEV)/(element.Delta_M-2*self.m_e_MEV)
         
         #calculate amplitudes for a model and mass mechanism
-        Amplitude, _ = self.amplitudes(element_name, self.WC)
+        Amplitude, _ = self.amplitudes(isotope, self.WC)
         if show_mbb:
-            Amplitude_mbb, _ = self.amplitudes(element_name, WC_mbb)
+            Amplitude_mbb, _ = self.amplitudes(isotope, WC_mbb)
         
         #generate figures            
         fig = plt.figure(figsize=(6.4*1.85, 4.8*2))
         if print_title:
             plt.title("Angular Correlation")
         if show_mbb:
-            a_corr_mbb = self.angular_corr(Ebar, amp = Amplitude_mbb, element_name = element_name)
-        a_corr = self.angular_corr(Ebar, amp = Amplitude, element_name = element_name)
+            a_corr_mbb = self.angular_corr(Ebar, amp = Amplitude_mbb, isotope = isotope)
+        a_corr = self.angular_corr(Ebar, amp = Amplitude, isotope = isotope)
         if show_mbb:
             plt.plot(Ebar, a_corr_mbb, "r", label = r"$m_{\beta\beta}$")
         plt.plot(Ebar, a_corr, "b", label = self.name)
@@ -1802,7 +1835,7 @@ class LEFT(object):
         if addgrid:
             plt.grid(linestyle = "--")
         if save:
-            plt.savefig("angular_correlation_"+element_name+"_"+self.name+".png", dpi = 300)
+            plt.savefig("angular_correlation_"+isotope+"_"+self.name+".png", dpi = 300)
         return(fig)
     
     def get_limits2(self, half_live, isotope = "76Ge", basis = None, method = None, onlygroups = False):
@@ -1861,11 +1894,11 @@ class LEFT(object):
 
             
             for WC_name in WCgroups:
-                hl = self.t_half(WC = {WC_name:1}, method = method, element_name = isotope)
+                hl = self.t_half(WC = {WC_name:1}, method = method, isotope = isotope)
                 result_2GeV[WC_name] = np.sqrt(hl/half_live)
         else:
             for WC_name in self.WC:
-                hl = self.t_half(WC = {WC_name:1}, method = method, element_name = isotope)
+                hl = self.t_half(WC = {WC_name:1}, method = method, isotope = isotope)
                 result_2GeV[WC_name] = np.sqrt(hl/half_live)
 #run results up to the desired scale
         #results = self.run(result_2GeV, initial_scale = 2, final_scale = scale)
@@ -1904,7 +1937,7 @@ class LEFT(object):
                     scales[WC_name] = self.vev/(results[WC_name]**(1/5))/1000
         return(results, scales)
 
-    def get_limits(self, half_live, element_name="76Ge", scale = 80, basis = None, method=None):
+    def get_limits(self, half_live, isotope = "76Ge", scale = 80, basis = None, method=None):
     #this function can calculate the limits on the different LEFT coefficients for a given experimental half_live and isotope
     #the limits are calculate at the scale "scale" and for the chosen basis
         
@@ -1923,7 +1956,7 @@ class LEFT(object):
             
         method = self.method
 
-        def t_half_optimize(WC_value, WC_name, element_name, run = False):
+        def t_half_optimize(WC_value, WC_name, isotope, run = False):
             #helper function to find the root
             WC = self.WC.copy()
             for operator in WC:
@@ -1931,13 +1964,13 @@ class LEFT(object):
 
             WC[WC_name]=WC_value
             #Calculates the half-live for a given element and WCs
-            amp, M = self.amplitudes(element_name, WC)
-            element = self.elements[element_name]
+            amp, M = self.amplitudes(isotope, WC)
+            element = self.elements[isotope]
             
             g_A=self.LEC["A"]
             
             #G = PSFs[element]
-            G = self.to_G(element_name)
+            G = self.to_G(isotope)
             #m_e = pc["electron mass energy equivalent in MeV"][0]
     
             #Some PSFs need a rescaling due to different definitions in DOIs paper and 1806...
@@ -1970,7 +2003,7 @@ class LEFT(object):
 
         #calculate the limits on the WCs at the scale of 2GeV
         for WC_name in self.WC:
-            limit_2GeV = optimize.root(t_half_optimize, args=(WC_name, element_name, False), x0=1e-15).x[0]
+            limit_2GeV = optimize.root(t_half_optimize, args=(WC_name, isotope, False), x0=1e-15).x[0]
             result_2GeV[WC_name] = limit_2GeV
 
         #run results up to the desired scale
@@ -2056,7 +2089,7 @@ class LEFT(object):
                m_min=1,                   #absolute value of variational WC
                ordering="both",           #mass ordering either NO, IO or both
                dcp=1.36,                  #dirac cp phase
-               element_name = "76Ge",     #name of the isotope
+               isotope = "76Ge",     #name of the isotope
                normalize_to_mass = False, #return value normalized to the standard mass mechanism
                vary_WC  = "m_min"         #variational WC
               ):
@@ -2156,10 +2189,10 @@ class LEFT(object):
         V_ud = 0.97417
 
 
-        G01 = self.to_G(element_name)["01"]
-        M3 = self.amplitudes(element_name, self.WC)[1]["nu(3)"]
+        G01 = self.to_G(isotope)["01"]
+        M3 = self.amplitudes(isotope, self.WC)[1]["nu(3)"]
         #NO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
-        NO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
+        NO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
         
         
 
@@ -2169,7 +2202,7 @@ class LEFT(object):
                 NO_eff /= self.WC["m_bb"]
             self.WC["m_bb"] = m_BB_IO*1e-9
             #IO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
-            IO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
+            IO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
 
             if normalize_to_mass:
                 IO_eff /= self.WC["m_bb"]
@@ -2195,7 +2228,7 @@ class LEFT(object):
                      m_min=1,                   #absolute value of variational WC
                      ordering="both",           #mass ordering either NO, IO or both
                      dcp=1.36,                  #dirac cp phase
-                     element_name = "76Ge",     #name of the isotope
+                     isotope = "76Ge",          #name of the isotope
                      normalize_to_mass = False, #return value normalized to the standard mass mechanism
                      vary_WC  = "m_min"         #variational WC
                     ):
@@ -2261,10 +2294,10 @@ class LEFT(object):
         V_ud = 0.97417
 
 
-        G01 = self.to_G(element_name)["01"]
-        M3 = self.amplitudes(element_name, self.WC)[1]["nu(3)"]
+        G01 = self.to_G(isotope)["01"]
+        M3 = self.amplitudes(isotope, self.WC)[1]["nu(3)"]
         #NO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
-        NO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
+        NO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
         
         
 
@@ -2274,7 +2307,7 @@ class LEFT(object):
                 NO_eff /= self.WC["m_bb"]
             self.WC["m_bb"] = m_BB_IO*1e-9
             #IO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
-            IO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
+            IO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
 
             if normalize_to_mass:
                 IO_eff /= self.WC["m_bb"]
@@ -2350,7 +2383,7 @@ class LEFT(object):
             return(-m_BB_NO,-m_BB_IO)
         
        
-    def _m_eff_minmax(self, m_min, element_name = "76Ge", ordering="both", dcp=1.36, 
+    def _m_eff_minmax(self, m_min, isotope = "76Ge", ordering="both", dcp=1.36, 
                       numerical_method="Powell", varyLECs = False, normalize_to_mass = False, vary_WC  = "m_min"):
         #this function returns the effective majorana mass m_bb_eff
         #m_bb_eff reflects the majorana mass m_bb necessary to generate the same half-live as the input model does
@@ -2375,8 +2408,8 @@ class LEFT(object):
         V_ud = 0.97417
 
 
-        G01 = self.to_G(element_name)["01"]
-        M3 = self.amplitudes(element_name, self.WC)[1]["nu(3)"]
+        G01 = self.to_G(isotope)["01"]
+        M3 = self.amplitudes(isotope, self.WC)[1]["nu(3)"]
 
         if ordering == "NO":
             if vary_WC == "m_min":
@@ -2384,16 +2417,16 @@ class LEFT(object):
             else:
                 pre_alpha = 1
             #get minimal and maximal m_bb by varying phases
-            NO_min = (scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
-            NO_max = (-scipy.optimize.minimize(self._m_eff_minus, x0=pre_alpha,args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+            NO_min = (scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "NO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+            NO_max = (-scipy.optimize.minimize(self._m_eff_minus, x0=pre_alpha,args=(m_min, "NO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
 
             self.WC["m_bb"] = NO_min*1e-9
             #NO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
-            NO_min_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
+            NO_min_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
 
             self.WC["m_bb"] = NO_max*1e-9
             #NO_max_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
-            NO_max_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
+            NO_max_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
             
             
             self.WC["m_bb"] = m_bb_backup
@@ -2406,18 +2439,18 @@ class LEFT(object):
             else:
                 pre_alpha = 1
             #get minimal and maximal m_bb by varying phases
-            IO_min = (scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
-            IO_max = (-scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+            IO_min = (scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "IO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+            IO_max = (-scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "IO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
 
             self.WC["m_bb"] = IO_min*1e-9
             #IO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
 
-            IO_min_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
+            IO_min_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
 
 
             self.WC["m_bb"] = IO_max*1e-9
             #IO_max_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
-            IO_max_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
+            IO_max_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
             
             
             self.WC["m_bb"] = m_bb_backup
@@ -2430,11 +2463,11 @@ class LEFT(object):
                 pre_alpha = [1,0]
             else:
                 pre_alpha = 1
-            NO_min_eff = (scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
-            NO_max_eff = (-scipy.optimize.minimize(self._m_eff_minus, x0=pre_alpha,args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+            NO_min_eff = (scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "NO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+            NO_max_eff = (-scipy.optimize.minimize(self._m_eff_minus, x0=pre_alpha,args=(m_min, "NO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
             if vary_WC  == "m_min":
-                IO_min_eff = (scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
-                IO_max_eff = (-scipy.optimize.minimize(self._m_eff_minus, x0=pre_alpha,args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+                IO_min_eff = (scipy.optimize.minimize(self._m_eff, x0=pre_alpha,args=(m_min, "IO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
+                IO_max_eff = (-scipy.optimize.minimize(self._m_eff_minus, x0=pre_alpha,args=(m_min, "IO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method)["fun"])
             
             
             self.WC["m_bb"] = m_bb_backup
@@ -2454,7 +2487,7 @@ class LEFT(object):
                     return ([NO_min_eff*1e+9, NO_max_eff*1e+9])
         
     def plot_m_eff(self, m_cosmo = 0.15, x_min = 1e-4, x_max = 1e+0, y_min=None, y_max=None, n_dots = 100, 
-                   element_name = "76Ge", cosmo = False, experiments = None, ordering="both", savefig=False, 
+                   isotope = "76Ge", cosmo = False, experiments = None, ordering="both", savefig=False, 
                    numerical_method="Powell", compare_to_mass = False, normalize_to_mass = False, vary_WC  = "m_min"):#, varyLECs = False):
         
         if vary_WC == "m_sum":
@@ -2509,7 +2542,7 @@ class LEFT(object):
             m_min = M[idx]
             if vary_WC  == "m_min" or vary_WC == "m_sum":
                 [NO_min[idx], NO_max[idx]], [IO_min[idx], IO_max[idx]] = self._m_eff_minmax(m_min, 
-                                                                                        element_name, 
+                                                                                        isotope, 
                                                                                         ordering=ordering, 
                                                                                         normalize_to_mass = normalize_to_mass, 
                                                                                         vary_WC  = "m_min" )#, 
@@ -2519,20 +2552,20 @@ class LEFT(object):
                     for operator in self.WC:
                         self.WC[operator]=0
                     [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._m_eff_minmax(m_min, 
-                                                                                        element_name, 
+                                                                                        isotope, 
                                                                                         normalize_to_mass = normalize_to_mass, 
                                                                                         vary_WC  = vary_WC )#, varyLECs = varyLECs)
                     self.WC = WCbackup.copy()
                     
             elif vary_WC == "m_sum":
                 [NO_min[idx], NO_max[idx]] = self._m_eff_minmax(MNO[idx], 
-                                                                element_name, 
+                                                                isotope, 
                                                                 ordering="NO", 
                                                                 normalize_to_mass = normalize_to_mass, 
                                                                 vary_WC  = vary_WC )#, 
                 
                 [IO_min[idx], IO_max[idx]] = self._m_eff_minmax(MIO[idx], 
-                                                                element_name, 
+                                                                isotope, 
                                                                 ordering="IO", 
                                                                 normalize_to_mass = normalize_to_mass, 
                                                                 vary_WC  = vary_WC )
@@ -2542,11 +2575,11 @@ class LEFT(object):
                     for operator in self.WC:
                         self.WC[operator]=0
                     [NO_min_mbb[idx], NO_max_mbb[idx]] = self._m_eff_minmax(MNO[idx], 
-                                                                            element_name, ordering = "NO",
+                                                                            isotope, ordering = "NO",
                                                                             normalize_to_mass = normalize_to_mass, 
                                                                             vary_WC  = vary_WC )#, varyLECs = varyLECs)
                     [IO_min_mbb[idx], IO_max_mbb[idx]] = self._m_eff_minmax(MIO[idx], 
-                                                                            element_name, ordering = "IO",
+                                                                            isotope, ordering = "IO",
                                                                             normalize_to_mass = normalize_to_mass, 
                                                                             vary_WC  = vary_WC )#, varyLECs = varyLECs)
                     self.WC = WCbackup.copy()
@@ -2554,7 +2587,7 @@ class LEFT(object):
             else:
                 
                 [NO_min[idx], NO_max[idx]] = self._m_eff_minmax(m_min, 
-                                                                element_name, 
+                                                                isotope, 
                                                                 ordering=ordering, 
                                                                 normalize_to_mass = normalize_to_mass,
                                                                 vary_WC  = vary_WC )#, 
@@ -2564,7 +2597,7 @@ class LEFT(object):
                     for operator in self.WC:
                         self.WC[operator]=0
                     [NO_min_mbb[idx], NO_max_mbb[idx]] = self._m_eff_minmax(m_min, 
-                                                                            element_name, 
+                                                                            isotope, 
                                                                             normalize_to_mass = normalize_to_mass, 
                                                                             vary_WC  = vary_WC )#, varyLECs = varyLECs)
                     self.WC = WCbackup.copy()
@@ -2721,7 +2754,7 @@ class LEFT(object):
                 m_min,                     #value of variational parameter
                 ordering="NO",             #NO or IO
                 dcp=1.36,                  #cp-phase dirac neutrinos
-                element_name = "76Ge",     #isotope to calculate
+                isotope = "76Ge",     #isotope to calculate
                 normalize_to_mass = False, #return value normalized to the standard mass mechanism
                 vary_WC  = "m_min"
                ):
@@ -2735,13 +2768,13 @@ class LEFT(object):
             else:
                 factor = 1
             self.WC[vary_WC] = np.exp(1j*alpha)*m_min*factor
-        t_half = self.t_half(element_name=element_name)
+        t_half = self.t_half(isotope = isotope)
         if normalize_to_mass:
             WCbackup = self.WC.copy()
             for operator in self.WC:
                 if operator != "m_bb":
                     self.WC[operator] = 0
-            t_half_mbb = self.t_half(element_name=element_name)
+            t_half_mbb = self.t_half(isotope = isotope)
             t_half/=t_half_mbb
             self.WC = WCbackup.copy()
         self.WC = WC_backup.copy()
@@ -2753,7 +2786,7 @@ class LEFT(object):
                       m_min,                     #value of variational parameter
                       ordering="NO",             #NO or IO
                       dcp=1.36,                  #cp-phase dirac neutrinos
-                      element_name = "76Ge",     #isotope to calculate
+                      isotope = "76Ge",     #isotope to calculate
                       normalize_to_mass = False, #return value normalized to the standard mass mechanism
                       vary_WC  = "m_min"
                      ):
@@ -2769,13 +2802,13 @@ class LEFT(object):
             else:
                 factor = 1
             self.WC[vary_WC] = np.exp(1j*alpha)*m_min*factor
-        t_half = self.t_half(element_name=element_name)
+        t_half = self.t_half(isotope = isotope)
         if normalize_to_mass:
             WCbackup = self.WC.copy()
             for operator in self.WC:
                 if operator != "m_bb":
                     self.WC[operator] = 0
-            t_half_mbb = self.t_half(element_name=element_name)
+            t_half_mbb = self.t_half(isotope = isotope)
             t_half/=t_half_mbb
             self.WC = WCbackup.copy()
         self.WC = WC_backup.copy()
@@ -2786,7 +2819,7 @@ class LEFT(object):
                        m_min, 
                        ordering="both", 
                        dcp=1.36, 
-                       element_name="76Ge", 
+                       isotope="76Ge", 
                        numerical_method="powell",
                        tol=None, 
                        normalize_to_mass = False, 
@@ -2798,29 +2831,29 @@ class LEFT(object):
         else:
             pre_alpha = 1
         if ordering == "NO":
-            t_half_min_NO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, ordering, dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
-            t_half_max_NO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, ordering, dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+            t_half_min_NO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, ordering, dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+            t_half_max_NO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, ordering, dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
             return([t_half_min_NO, t_half_max_NO])
 
         elif ordering == "IO":
-            t_half_min_IO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, ordering, dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
-            t_half_max_IO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, ordering, dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+            t_half_min_IO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, ordering, dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+            t_half_max_IO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, ordering, dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
             return([t_half_min_IO, t_half_max_IO])
 
         else:
-            t_half_min_NO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
-            t_half_max_NO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, "NO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+            t_half_min_NO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, "NO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+            t_half_max_NO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, "NO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
             if vary_WC == "m_min":
-                t_half_min_IO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
-                t_half_max_IO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, "IO", dcp, element_name, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+                t_half_min_IO = (scipy.optimize.minimize(self._t_half, x0=pre_alpha, args=(m_min, "IO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
+                t_half_max_IO = (scipy.optimize.minimize(self._t_half_minus, x0=pre_alpha, args=(m_min, "IO", dcp, isotope, normalize_to_mass, vary_WC), method=numerical_method, tol=tol)["fun"])
                 return([t_half_min_NO, t_half_max_NO], [t_half_min_IO, t_half_max_IO])
             else:
                 return([t_half_min_NO, t_half_max_NO])
                 
         
     def plot_t_half_inv(self, m_cosmo = 0.15, x_min = 1e-4, x_max = 1e+0, y_min=None, y_max=None, n_dots = 100, 
-                   element_name = "76Ge", cosmo = False, experiments = None, ordering="both", savefig=True, dcp=1.36,
-                    numerical_method="Powell", compare_to_mass = False, normalize_to_mass = False, vary_WC = "m_min"):
+                        isotope = "76Ge", cosmo = False, experiments = None, ordering="both", savefig=True, dcp=1.36,
+                        numerical_method="Powell", compare_to_mass = False, normalize_to_mass = False, vary_WC = "m_min"):
         #model=EFT.LEFT(WC)
         M = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), n_dots)
 
@@ -2842,7 +2875,7 @@ class LEFT(object):
             if vary_WC == "m_min":
                 m_min = M[idx]
                 [NO_min[idx], NO_max[idx]], [IO_min[idx], IO_max[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                      element_name=element_name, ordering=ordering, 
+                                                                                      isotope=isotope, ordering=ordering, 
                                                                                        dcp=dcp, numerical_method=numerical_method, 
                                                                                              normalize_to_mass = normalize_to_mass, 
                                                                                              vary_WC = vary_WC)
@@ -2852,7 +2885,7 @@ class LEFT(object):
                         self.WC[operator] = 0
 
                     [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                          element_name=element_name, 
+                                                                                          isotope=isotope, 
                                                                                                                  ordering=ordering, 
                                                                                                                  dcp=dcp,
                                                                                                                   numerical_method=numerical_method, 
@@ -2864,7 +2897,7 @@ class LEFT(object):
             else:
                 m_min = M[idx]
                 [NO_min[idx], NO_max[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                      element_name=element_name, ordering=ordering, 
+                                                                                      isotope=isotope, ordering=ordering, 
                                                                                        dcp=dcp, numerical_method=numerical_method, 
                                                                                              normalize_to_mass = normalize_to_mass, 
                                                                                              vary_WC = vary_WC)
@@ -2874,12 +2907,12 @@ class LEFT(object):
                         self.WC[operator] = 0
 
                     [NO_min_mbb[idx], NO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                          element_name=element_name, 
-                                                                                                                 ordering=ordering, 
-                                                                                                                 dcp=dcp,
-                                                                                                                  numerical_method=numerical_method, 
-                                                                                             normalize_to_mass = normalize_to_mass, 
-                                                                                             vary_WC = vary_WC)
+                                                                             isotope=isotope, 
+                                                                             ordering=ordering, 
+                                                                             dcp=dcp,
+                                                                             numerical_method=numerical_method, 
+                                                                             normalize_to_mass = normalize_to_mass, 
+                                                                             vary_WC = vary_WC)
 
                     self.WC = WCbackup.copy()
 
@@ -2974,7 +3007,7 @@ class LEFT(object):
         return(fig)
     
     def plot_t_half(self, m_cosmo = 0.15, x_min = 1e-4, x_max = 1e+0, y_min=None, y_max=None, n_dots = 100, 
-                    element_name = "76Ge", cosmo = False, experiments = None, ordering="both", savefig=False, dcp=1.36,
+                    isotope = "76Ge", cosmo = False, experiments = None, ordering="both", savefig=False, dcp=1.36,
                     numerical_method="Powell", compare_to_mass = False, normalize_to_mass = False, vary_WC = "m_min"):
 
         M = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), n_dots)
@@ -2997,7 +3030,7 @@ class LEFT(object):
             m_min = M[idx]
             if vary_WC == "m_min":
                 [NO_min[idx], NO_max[idx]], [IO_min[idx], IO_max[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                      element_name=element_name, ordering=ordering, 
+                                                                                      isotope=isotope, ordering=ordering, 
                                                                                        dcp=dcp, numerical_method=numerical_method,
                                                                                              normalize_to_mass = normalize_to_mass, 
                                                                                              vary_WC = vary_WC)
@@ -3007,14 +3040,14 @@ class LEFT(object):
                         self.WC[operator] = 0
 
                     [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                          element_name=element_name, ordering=ordering, 
+                                                                                          isotope=isotope, ordering=ordering, 
                                                                                            dcp=dcp, numerical_method=numerical_method, normalize_to_mass = normalize_to_mass, 
                                                                                              vary_WC = vary_WC)
 
                     self.WC = WCbackup.copy()
             else:
                 [NO_min[idx], NO_max[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                      element_name=element_name, ordering=ordering, 
+                                                                                      isotope=isotope, ordering=ordering, 
                                                                                        dcp=dcp, numerical_method=numerical_method,
                                                                                              normalize_to_mass = normalize_to_mass, 
                                                                                              vary_WC = vary_WC)
@@ -3024,7 +3057,7 @@ class LEFT(object):
                         self.WC[operator] = 0
 
                     [NO_min_mbb[idx], NO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                          element_name=element_name, ordering=ordering, 
+                                                                                          isotope=isotope, ordering=ordering, 
                                                                                            dcp=dcp, numerical_method=numerical_method, normalize_to_mass = normalize_to_mass, 
                                                                                              vary_WC = vary_WC)
 
@@ -3120,12 +3153,12 @@ class LEFT(object):
             plt.savefig("t_half.png", dpi=300)
         return(fig)
     
-    def plot_limits(self, experiments, method="IBM2", plot_groups=True, savefig=False, plottype="scales"):
+    def plot_limits(self, experiments, method = "IBM2", plot_groups=True, savefig=False, plottype="scales"):
         #model = EFT.LEFT({}, method=method)
         limits = {}
         scales = {}
         for element in experiments:
-            limits[element], scales[element] = self.get_limits(experiments[element], element_name = element)
+            limits[element], scales[element] = self.get_limits(experiments[element], isotope = element)
                     
 
         scales = pd.DataFrame(scales)
@@ -3204,7 +3237,7 @@ class LEFT(object):
                 
         return(fig.get_figure())
     
-    def plot_m_eff_scatter(self, vary_WC = "m_min", vary_phases = True, element_name="76Ge", 
+    def plot_m_eff_scatter(self, vary_WC = "m_min", vary_phases = True, isotope="76Ge", 
                            vary_LECs=False, n_dots=10000, ordering = "both", 
                            save=False, file="m_eff_scatter.png", alpha_plot=1, 
                            x_min=1e-4, x_max = 1, y_min = None, y_max = None, 
@@ -3252,7 +3285,7 @@ class LEFT(object):
             for idx in range(100):
                 m_min = M_mbb[idx]
                 [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._m_eff_minmax(m_min, 
-                                                                              element_name, normalize_to_mass = normalize_to_mass)#, varyLECs = varyLECs)
+                                                                              isotope, normalize_to_mass = normalize_to_mass)#, varyLECs = varyLECs)
             self.WC = WCbackup.copy()
             
             NO_min_mbb = np.absolute(NO_min_mbb)
@@ -3263,7 +3296,7 @@ class LEFT(object):
             
             
             
-        G01 = self.to_G(element_name)["01"]
+        G01 = self.to_G(isotope)["01"]
         #m_e = 5.10998e-4
         g_A = self.LEC["A"]
         V_ud = 0.97417
@@ -3309,8 +3342,8 @@ class LEFT(object):
                         random_LEC = np.random.choice([1,-1])*((np.sqrt(10)-1/np.sqrt(10))*np.random.rand()+1/np.sqrt(10))*LECs[LEC]
                         self.LEC[LEC] = random_LEC
 
-            t = self.t_half(element_name)
-            M3 = self.amplitudes(element_name, self.WC)[1]["nu(3)"]
+            t = self.t_half(isotope)
+            M3 = self.amplitudes(isotope, self.WC)[1]["nu(3)"]
             #m_eff = np.absolute(self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * t**(-1/2))*1e+9
             m_eff = np.absolute(self.m_e / (g_A**2*M3*G01**(1/2)) * t**(-1/2))*1e+9
             #if t < 1e+26:
@@ -3329,11 +3362,11 @@ class LEFT(object):
                 #    model.LEC[LEC] = random_LEC
 
 
-                t = self.t_half(element_name)
+                t = self.t_half(isotope)
                 #if t < 1e+26:
                 #    forbidden_LECsIO.append(model.LEC["nuNN"])
                 #    forbidden_LECsIOm.append(m_min)
-                M3 = self.amplitudes(element_name, self.WC)[1]["nu(3)"]
+                M3 = self.amplitudes(isotope, self.WC)[1]["nu(3)"]
                 #m_effIO = np.absolute(self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * t**(-1/2))*1e+9
                 m_effIO = np.absolute(self.m_e / (g_A**2*M3*G01**(1/2)) * t**(-1/2))*1e+9
                 pointsIO[x][0] = m_min
@@ -3421,7 +3454,7 @@ class LEFT(object):
         #return(forbidden_LECsNO, forbidden_LECsNOm, forbidden_LECsIO, forbidden_LECsIOm)
         
     def plot_t_half_scatter(self, vary_WC = "m_min", vary_phases = True, vary_LECs=False, experiments=None, n_dots=10000, 
-                            save = False, file="t_half_scatter.png", alpha_plot=1, element_name = "76Ge", ordering = None, 
+                            save = False, file="t_half_scatter.png", alpha_plot=1, isotope = "76Ge", ordering = None, 
                             x_min=1e-4, x_max = 1, y_min = None, y_max = None, cosmo=True, m_cosmo  = 0.15, 
                             compare_to_mass = False, normalize_to_mass = False):
         #model = EFT.LEFT(WC)
@@ -3468,14 +3501,14 @@ class LEFT(object):
             for idx in range(100):
                 m_min = M_mbb[idx]
                 [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._t_half_minmax(m_min, 
-                                                                              element_name, normalize_to_mass = normalize_to_mass)#, varyLECs = varyLECs)
+                                                                              isotope, normalize_to_mass = normalize_to_mass)#, varyLECs = varyLECs)
             self.WC = WCbackup.copy()
             
             NO_min_mbb = np.absolute(NO_min_mbb)
             NO_max_mbb = np.absolute(NO_max_mbb)
             IO_min_mbb = np.absolute(IO_min_mbb)
             IO_max_mbb = np.absolute(IO_max_mbb)
-        G01 = self.to_G(element_name)["01"]
+        G01 = self.to_G(isotope)["01"]
         #m_e = 5.10998e-4
         g_A = self.LEC["A"]
         V_ud = 0.97417
@@ -3521,7 +3554,7 @@ class LEFT(object):
                         random_LEC = np.random.choice([1,-1])*((np.sqrt(10)-1/np.sqrt(10))*np.random.rand()+1/np.sqrt(10))*LECs[LEC]
                         self.LEC[LEC] = random_LEC
 
-            t = self.t_half(element_name)
+            t = self.t_half(isotope)
             #M3 = model.amplitudes(element_name, model.WC)[1]["nu(3)"]
             #m_eff = np.absolute(m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * t**(-1/2))*1e+9
             #if t < 1e+26:
@@ -3534,7 +3567,7 @@ class LEFT(object):
                 for operator in self.WC:
                     if operator != "m_bb":
                         self.WC[operator]=0
-                t_half_mbb = self.t_half(element_name)
+                t_half_mbb = self.t_half(isotope)
                 self.WC = WC_backup.copy()
                 points[x][1] /= t_half_mbb
             if vary_WC == "m_min":
@@ -3544,7 +3577,7 @@ class LEFT(object):
                 #    model.LEC[LEC] = random_LEC
 
 
-                tIO = self.t_half(element_name)
+                tIO = self.t_half(isotope)
                 #if t < 1e+26:
                 #    forbidden_LECsIO.append(model.LEC["nuNN"])
                 #    forbidden_LECsIOm.append(m_min)
@@ -3558,7 +3591,7 @@ class LEFT(object):
                     for operator in self.WC:
                         if operator != "m_bb":
                             self.WC[operator]=0
-                    t_half_mbb = self.t_half(element_name)
+                    t_half_mbb = self.t_half(isotope)
                     self.WC = WC_backup.copy()
                     pointsIO[x][1] /= t_half_mbb
             else:
@@ -3637,7 +3670,7 @@ class LEFT(object):
             plt.savefig(file)
         return(fig)
     def plot_t_half_inv_scatter(self, vary_WC = "m_min", vary_phases = True, vary_LECs=False, experiments=None, n_dots=10000, 
-                                save = False, file="t_half_scatter.png", alpha_plot=1, element_name = "76Ge", 
+                                save = False, file="t_half_scatter.png", alpha_plot=1, isotope = "76Ge", 
                                 x_min=1e-4, x_max = 1, y_min = None, y_max = None, cosmo=True, m_cosmo = 0.15, 
                                 compare_to_mass = False, normalize_to_mass = False, ordering = None):
         #m_N = 0.93
@@ -3683,7 +3716,7 @@ class LEFT(object):
             for idx in range(100):
                 m_min = M_mbb[idx]
                 [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._t_half_minmax(m_min, 
-                                                                              element_name, normalize_to_mass = normalize_to_mass)#, varyLECs = varyLECs)
+                                                                              isotope, normalize_to_mass = normalize_to_mass)#, varyLECs = varyLECs)
             self.WC = WCbackup.copy()
             
             NO_min_mbb = np.absolute(1/NO_min_mbb)
@@ -3692,7 +3725,7 @@ class LEFT(object):
             IO_max_mbb = np.absolute(1/IO_max_mbb)
         
         
-        G01 = self.to_G(element_name)["01"]
+        G01 = self.to_G(isotope)["01"]
         m_backup = self.WC["m_bb"]
         LEC_backup = self.LEC.copy()
         #m_e = 5.10998e-4
@@ -3740,7 +3773,7 @@ class LEFT(object):
                         random_LEC = np.random.choice([1,-1])*((np.sqrt(10)-1/np.sqrt(10))*np.random.rand()+1/np.sqrt(10))*LECs[LEC]
                         self.LEC[LEC] = random_LEC
 
-            t = self.t_half(element_name)
+            t = self.t_half(isotope)
             #M3 = model.amplitudes(element_name, model.WC)[1]["nu(3)"]
             #m_eff = np.absolute(m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * t**(-1/2))*1e+9
             #if t < 1e+26:
@@ -3753,7 +3786,7 @@ class LEFT(object):
                 for operator in self.WC:
                     if operator != "m_bb":
                         self.WC[operator]=0
-                t_half_mbb = self.t_half(element_name)
+                t_half_mbb = self.t_half(isotope)
                 self.WC = WC_backup.copy()
                 points[x][1] *= t_half_mbb
             if vary_WC == "m_min":
@@ -3763,7 +3796,7 @@ class LEFT(object):
                 #    model.LEC[LEC] = random_LEC
 
 
-                tIO = self.t_half(element_name)
+                tIO = self.t_half(isotope)
                 #if t < 1e+26:
                 #    forbidden_LECsIO.append(model.LEC["nuNN"])
                 #    forbidden_LECsIOm.append(m_min)
@@ -3777,7 +3810,7 @@ class LEFT(object):
                     for operator in self.WC:
                         if operator != "m_bb":
                             self.WC[operator]=0
-                    t_half_mbb = self.t_half(element_name)
+                    t_half_mbb = self.t_half(isotope)
                     self.WC = WC_backup.copy()
                     pointsIO[x][1] *= t_half_mbb
             else:
@@ -3856,22 +3889,51 @@ class LEFT(object):
             plt.savefig(file)
         return(fig)
     
-    def generate_formula(self, isotope = "76Ge", WCs = None, output = "latex"):
+    def generate_formula(self, isotope, WCs = None, method = None, decimal = 2, output = "latex"):
+        if method == None:
+            method = self.method
+            pass
+        elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
+            pass
+            #print("Using",method)
+            #self.method = method
+            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+        elif method not in ["IBM2", "QRPA", "SM"]:
+            print("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
+        else:
+            method = self.method
+            pass
+            
         if WCs == None:
             WCs = []
             for WC in self.WC:
                 if self.WC[WC] != 0:
                     WCs.append(WC)
-        return(f.generate_formula(WCs, isotope, output, method = self.method))
+        return(f.generate_formula(WCs, isotope, output, method = method, decimal = decimal))
     
     
-    def generate_matrix(self, isotope = "76Ge", WCs = None):
+    def generate_matrix(self, isotope, WCs = None, method = None):
+        if method == None:
+            method = self.method
+            pass
+        elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
+            pass
+            #print("Using",method)
+            #self.method = method
+            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+        elif method not in ["IBM2", "QRPA", "SM"]:
+            print("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
+        else:
+            method = self.method
+            pass
         if WCs == None:
             WCs = []
             for WC in self.WC:
                 if self.WC[WC] != 0:
                     WCs.append(WC)
-        return(f.generate_matrix(WCs, isotope, method = self.method))
+        return(f.generate_matrix(WCs, isotope, method = method))
 
 '''
 #####################################################################################################
@@ -3884,12 +3946,14 @@ class LEFT(object):
 '''
 
 class SMEFT(object):
-    def __init__(self, WC, scale, name = None, method = "IBM2", use_unknown_LECs = False):
+    def __init__(self, WC, scale, name = None, method = "IBM2", unknown_LECs = False):
+        if scale <=80:
+            raise ValueError("scale must be greater than 80")
         self.method = method                       #NME method
         self.name = name                           #Model name
         self.m_Z = 91                              #Z-Boson Mass in GeV
         self.scale = scale                         #Matching scale BSM -> SMEFT
-        self.use_unknown_LECs = use_unknown_LECs   #Use unknown LECs or not
+        self.unknown_LECs = unknown_LECs   #Use unknown LECs or not
         
         self.SMEFT_WCs = {#dim5                    #Wilson Coefficients of SMEFT
                           "LH(5)"      : 0,         #up to dimension 9. We only 
@@ -3939,7 +4003,7 @@ class SMEFT(object):
         for operator in WC:
             #store SMEFT operators
             #need to be conjugated to have d -> u transitions
-            self.SMEFT_WCs[operator] = WC[operator].conjugate()
+            self.SMEFT_WCs[operator] = WC[operator].conjugate() / self.scale
 
         self.WC_input = self.SMEFT_WCs.copy()
         self.WC = self.WC_input.copy()
@@ -4220,6 +4284,8 @@ class SMEFT(object):
         #this script takes some time because it needs to solve the different RGEs
         if WC == None:
             WC = self.WC.copy()
+            for operator in WC:
+                WC[operator]
             #print(WC)
             
         else:
@@ -4358,10 +4424,10 @@ class SMEFT(object):
         
         return(LEFT_WCs)
 
-    def set_LECs(self, use_unknown_LECs):
-        self.use_unknown_LECs = unknown_LECs
+    def set_LECs(self, unknown_LECs):
+        self.unknown_LECs = unknown_LECs
         
-    def t_half(self, element_name, WC = None, method = None):
+    def t_half(self, isotope, WC = None, method = None):
         if WC == None:
             WC = self.WC.copy()
         if method == None:
@@ -4372,13 +4438,13 @@ class SMEFT(object):
             pass
         LEFT_WCs = self.LEFT_matching(WC)
         model = LEFT(LEFT_WCs, method = method)
-        return(model.t_half(element_name))
+        return(model.t_half(isotope))
         
-    def half_lives(self, WC = None, use_unknown_LECs = None, method = None):#, printing = True):
+    def half_lives(self, WC = None, method = None):#, unknown_LECs = None):#, printing = True):
         if WC == None:
             WC = self.WC.copy()
-        if use_unknown_LECs == None:
-            use_unknown_LECs = self.use_unknown_LECs
+        if unknown_LECs == None:
+            unknown_LECs = self.unknown_LECs
         if method == None:
             method = self.method
         #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
@@ -4395,14 +4461,14 @@ class SMEFT(object):
         LEFT_WCs = self.LEFT_matching(WC)
         #if printing:
         #    print("... matching onto LEFT ...")
-        model = LEFT(LEFT_WCs, use_unknown_LECs = use_unknown_LECs, method = method)
+        model = LEFT(LEFT_WCs, unknown_LECs = unknown_LECs, method = method)
         return(model.half_lives())
     
-    def spectra(self, Ebar, WC = None, use_unknown_LECs = None, method = None, printing = True):
+    def spectra(self, Ebar, WC = None, method = None, printing = True):#, unknown_LECs = None
         if WC == None:
             WC = self.WC.copy()
-        if use_unknown_LECs == None:
-            use_unknown_LECs = self.use_unknown_LECs
+        #if unknown_LECs == None:
+        #    unknown_LECs = self.unknown_LECs
         if method == None:
             method = self.method
         #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
@@ -4419,14 +4485,14 @@ class SMEFT(object):
         LEFT_WCs = self.LEFT_matching(WC)
         if printing:
             print("... matching onto LEFT ...")
-        model = LEFT(LEFT_WCs, use_unknown_LECs = use_unknown_LECs, method = method)
+        model = LEFT(LEFT_WCs, unknown_LECs = unknown_LECs, method = method)
         return(model.spectra(Ebar))
     
-    def angular_corr(self, Ebar, WC = None, use_unknown_LECs = None, method = None, printing = True):
+    def angular_corr(self, Ebar, WC = None, method = None, printing = True):#, unknown_LECs = None
         if WC == None:
             WC = self.WC.copy()
-        if use_unknown_LECs == None:
-            use_unknown_LECs = self.use_unknown_LECs
+        #if unknown_LECs == None:
+        #    unknown_LECs = self.unknown_LECs
         if method == None:
             method = self.method
         #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
@@ -4443,12 +4509,20 @@ class SMEFT(object):
         LEFT_WCs = self.LEFT_matching(WC)
         if printing:
             print("... matching onto LEFT ...")
-        model = LEFT(LEFT_WCs, use_unknown_LECs = use_unknown_LECs, method = method)
+        model = LEFT(LEFT_WCs, unknown_LECs = unknown_LECs, method = method)
         return(model.angular_corr(Ebar))
 
-    def get_limits2(self, hl, use_unknown_LECs = False, method = None, isotope = "76Ge", onlygroups = False):
+    def get_limits2(self, hl, unknown_LECs = False, method = None, isotope = "76Ge", onlygroups = False):
         if method == None:
             method = self.method
+        #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
+            #print("Changing method to",method)
+        #    self.method = method
+            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+        elif method not in ["IBM2", "QRPA", "SM"]:
+            print("Method",method,"is unavailable. Keeping current method",self.method)
+        else:
+            pass
         vev = 246
         #make a backup of WCs
         WC = self.SMEFT_WCs.copy()
@@ -4461,7 +4535,7 @@ class SMEFT(object):
             limit = 1
             LEFT_WCs = self.LEFT_matching({WC_name : limit})
             LEFT_model = LEFT(LEFT_WCs, method=method)
-            hl = LEFT_model.t_half(element_name=isotope)
+            hl = LEFT_model.t_half(isotope=isotope)
             limit = np.sqrt(hl/half_live)
             #if limit != 1:
             result[WC_name] = limit
@@ -4474,9 +4548,17 @@ class SMEFT(object):
         
         return(result, scales)#, scale)
     
-    def get_limits(self, hl, use_unknown_LECs = False, method = None, element_name = "76Ge"):
+    def get_limits(self, hl, unknown_LECs = False, method = None, isotope = "76Ge"):
         if method == None:
             method = self.method
+        #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
+            #print("Changing method to",method)
+        #    self.method = method
+            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+        elif method not in ["IBM2", "QRPA", "SM"]:
+            print("Method",method,"is unavailable. Keeping current method",self.method)
+        else:
+            pass
         vev = 246
         #make a backup of WCs
         WC = self.SMEFT_WCs.copy()
@@ -4484,7 +4566,7 @@ class SMEFT(object):
         #define function to optimize to fit observed half-life
         #print("... solving a lot of RGEs ...")
         #print("This is going to take some time")
-        def t_half_optimize(WC_value, WC_name, element_name):
+        def t_half_optimize(WC_value, WC_name, isotope):
             #overwrite SMEFT WCs for the calculation and afterwards use backup
             for operator in WC:
                 WC[operator] = 0
@@ -4492,10 +4574,10 @@ class SMEFT(object):
             #print(WC_value)
             LEFT_WCs = self.LEFT_matching(WC=WC)
             #print(LEFT_WCs)
-            LEFT_model = LEFT(LEFT_WCs, method = method, use_unknown_LECs = use_unknown_LECs)
+            LEFT_model = LEFT(LEFT_WCs, method = method, unknown_LECs = unknown_LECs)
             #print(LEFT_WCs)
             #print(SMEFT_WCs)
-            result = LEFT_model.t_half(element_name) - half_live
+            result = LEFT_model.t_half(isotope) - half_live
             ##print(result)
             return(result)
 
@@ -4504,7 +4586,7 @@ class SMEFT(object):
         #scale = {}
         for WC_name in self.SMEFT_WCs:
             print(WC_name)
-            limit = np.absolute(optimize.root(t_half_optimize, args=(WC_name, element_name), x0=1e-15).x[0])
+            limit = np.absolute(optimize.root(t_half_optimize, args=(WC_name, isotope), x0=1e-15).x[0])
             if limit != 1e-15:
                 result[WC_name] = limit
                 if WC_name == "LH(5)":
@@ -4530,6 +4612,14 @@ class SMEFT(object):
     def ratios(self, save = False, plot = False, reference_isotope = "76Ge", normalized = True, method=None, vary = False, n_points = 100, addgrid = True):
         if method == None:
             method = self.method
+        #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
+            #print("Changing method to",method)
+        #    self.method = method
+            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+        elif method not in ["IBM2", "QRPA", "SM"]:
+            print("Method",method,"is unavailable. Keeping current method",self.method)
+        else:
+            pass
         LEFT_model = LEFT(self.LEFT_matching(), method = method)
         return(LEFT_model.ratios(save = save, plot = plot, 
                                  reference_isotope = reference_isotope, 

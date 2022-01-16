@@ -352,14 +352,14 @@ def generate_formula_coefficients(WCs, method = "IBM2"):
                 C[WC1+WC2] = 1/thalf3-(1/thalf2+1/thalf1)
     return(C)
 
-def generate_terms(WCs, isotope = "76Ge", output = "latex", method = "IBM2"):
+def generate_terms(WCs, isotope = "76Ge", output = "latex", method = "IBM2", decimal = 2):
     C = generate_formula_coefficients(WCs, method)
     if output not in ["latex", "html"]:
         raise ValueError("output must be either 'latex' or 'html'")
     terms = {}
     for WC1 in WCs:
         exponent = int(np.floor(np.log10(C[WC1][isotope][0])))
-        prefactor = np.round(C[WC1][isotope][0]*10**(-exponent),2)
+        prefactor = np.round(C[WC1][isotope][0]*10**(-exponent), decimal)
         if WC1 == "m_bb":
             if output == "latex":
                 WC1string = "\\frac{m_{\\beta\\beta}}{1\mathrm{GeV}}"
@@ -384,7 +384,7 @@ def generate_terms(WCs, isotope = "76Ge", output = "latex", method = "IBM2"):
             if WC2 not in terms:
                 #add second WC
                 exponent = int(np.floor(np.log10(C[WC2][isotope][0])))
-                prefactor = np.round(C[WC2][isotope][0]*10**(-exponent),2)
+                prefactor = np.round(C[WC2][isotope][0]*10**(-exponent), decimal)
                 if WC2 == "m_bb":
                     if output == "latex":
                         WC2string = "\\frac{m_{\\beta\\beta}}{1\mathrm{GeV}}"
@@ -410,7 +410,7 @@ def generate_terms(WCs, isotope = "76Ge", output = "latex", method = "IBM2"):
                 #add interference terms
                 if C[WC1+WC2][isotope][0] != 0:
                     exponent = int(np.floor(np.log10(np.abs(C[WC1+WC2][isotope][0]))))
-                    prefactor = np.round(C[WC1+WC2][isotope][0]*10**(-exponent),2)
+                    prefactor = np.round(C[WC1+WC2][isotope][0]*10**(-exponent), decimal)
                     if output == "latex":
                         terms[WC1+WC2] = ("$"+str(prefactor)+"\\times 10^{"+str(exponent)+"} \\mathrm{Re}["+WC1string+"({"+WC2string+"})^*]$")
                     if output == "html":
@@ -418,8 +418,8 @@ def generate_terms(WCs, isotope = "76Ge", output = "latex", method = "IBM2"):
                     
     return(terms)
 
-def generate_formula(WCs, isotope = "76Ge", output = "latex", method = "IBM2"):
-    terms = generate_terms(WCs, isotope, output, method)
+def generate_formula(WCs, isotope = "76Ge", output = "latex", method = "IBM2", decimal = 2):
+    terms = generate_terms(WCs, isotope, output, method, decimal)
     if output == "latex":
         formula = r"$T_{1/2}^{-1} = "
     elif output == "html":
@@ -485,7 +485,7 @@ def generate_matrix_coefficients(WCs, isotope = "76Ge", method = "IBM2"):
     return(C)
 
 def generate_matrix(WCs, isotope = "76Ge", method = "IBM2"):
-    C = generate_matrix_coefficients(WCs, isotope)
+    C = generate_matrix_coefficients(WCs, isotope, method)
     
     M = np.zeros([len(WCs), len(WCs)])
     for idx1 in range(len(WCs)):
