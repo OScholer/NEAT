@@ -334,14 +334,14 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
 #                                                                                                                               #
 #                                                                                                                               #
 #################################################################################################################################
-def generate_formula_coefficients(WCs, method = "IBM2"):
+def generate_formula_coefficients(WC, method = "IBM2"):
     C = {}
 
-    for WC1 in WCs:
+    for WC1 in WC:
         model1 = EFT.LEFT({WC1:1}, method=method)
         thalf1 = model1.half_lives()
         C[WC1] = 1/thalf1
-        for WC2 in WCs:
+        for WC2 in WC:
             if WC2 != WC1:
                 model2 = EFT.LEFT({WC2:1}, method=method)
                 model3 = EFT.LEFT({WC1:1, 
@@ -352,12 +352,12 @@ def generate_formula_coefficients(WCs, method = "IBM2"):
                 C[WC1+WC2] = 1/thalf3-(1/thalf2+1/thalf1)
     return(C)
 
-def generate_terms(WCs, isotope = "76Ge", output = "latex", method = "IBM2", decimal = 2):
-    C = generate_formula_coefficients(WCs, method)
+def generate_terms(WC, isotope = "76Ge", output = "latex", method = "IBM2", decimal = 2):
+    C = generate_formula_coefficients(WC, method)
     if output not in ["latex", "html"]:
         raise ValueError("output must be either 'latex' or 'html'")
     terms = {}
-    for WC1 in WCs:
+    for WC1 in WC:
         exponent = int(np.floor(np.log10(C[WC1][isotope][0])))
         prefactor = np.round(C[WC1][isotope][0]*10**(-exponent), decimal)
         if WC1 == "m_bb":
@@ -380,7 +380,7 @@ def generate_terms(WCs, isotope = "76Ge", output = "latex", method = "IBM2", dec
             terms[WC1] = "$"+str(prefactor)+"\\times 10^{"+str(exponent)+"}|"+WC1string+"|^2$"
         elif output == "html":
             terms[WC1] = str(prefactor)+"&times;10<sup>"+str(exponent)+"</sup>|"+WC1string+"|<sup>2</sup>"
-        for WC2 in WCs:
+        for WC2 in WC:
             if WC2 not in terms:
                 #add second WC
                 exponent = int(np.floor(np.log10(C[WC2][isotope][0])))
@@ -418,19 +418,19 @@ def generate_terms(WCs, isotope = "76Ge", output = "latex", method = "IBM2", dec
                     
     return(terms)
 
-def generate_formula(WCs, isotope = "76Ge", output = "latex", method = "IBM2", decimal = 2):
-    terms = generate_terms(WCs, isotope, output, method, decimal)
+def generate_formula(WC, isotope = "76Ge", output = "latex", method = "IBM2", decimal = 2):
+    terms = generate_terms(WC, isotope, output, method, decimal)
     if output == "latex":
         formula = r"$T_{1/2}^{-1} = "
     elif output == "html":
         formula = "T<sub>1/2</sub><sup>-1</sup> = "
-    for WC in WCs:
+    for WC in WC:
         if output == "latex":
             formula+="+"+terms[WC][1:-1]
         elif output == "html":
             formula+=" +"+terms[WC]
-    for WC1 in WCs:
-        for WC2 in WCs:
+    for WC1 in WC:
+        for WC2 in WC:
             if WC2 != WC1 and WC1+WC2 in terms:
                 if output == "latex":
                     if terms[WC1+WC2][1] != "-":
@@ -455,10 +455,10 @@ def generate_formula(WCs, isotope = "76Ge", output = "latex", method = "IBM2", d
 #                                                                                                                               #
 #################################################################################################################################
 
-def generate_matrix_coefficients(WCs, isotope = "76Ge", method = "IBM2"):
+def generate_matrix_coefficients(WC, isotope = "76Ge", method = "IBM2"):
     C = {}
 
-    for WC1 in WCs:
+    for WC1 in WC:
         #if WC1 == "m_bb":
         #    factor1 = 1e-9
         #else:
@@ -466,7 +466,7 @@ def generate_matrix_coefficients(WCs, isotope = "76Ge", method = "IBM2"):
         model1 = EFT.LEFT({WC1:1}, method=method)#*factor1})
         thalf1 = model1.half_lives()[isotope][0]
         #C[WC1] = 1/thalf1
-        for WC2 in WCs:
+        for WC2 in WC:
             #if WC2 = WC1:
             #if WC2 == "m_bb":
             #    factor2 = 1e-9
@@ -484,20 +484,20 @@ def generate_matrix_coefficients(WCs, isotope = "76Ge", method = "IBM2"):
                 C[WC1+WC2] = 1/2*(1/thalf3-(1/thalf2+1/thalf1))
     return(C)
 
-def generate_matrix(WCs, isotope = "76Ge", method = "IBM2"):
-    C = generate_matrix_coefficients(WCs, isotope, method)
+def generate_matrix(WC, isotope = "76Ge", method = "IBM2"):
+    C = generate_matrix_coefficients(WC, isotope, method)
     
-    M = np.zeros([len(WCs), len(WCs)])
-    for idx1 in range(len(WCs)):
+    M = np.zeros([len(WC), len(WC)])
+    for idx1 in range(len(WC)):
         try:
-            WC1 = list(WCs.keys())[idx1]
+            WC1 = list(WC.keys())[idx1]
         except:
-            WC1 = WCs[idx1]
-        for idx2 in range(len(WCs)):
+            WC1 = WC[idx1]
+        for idx2 in range(len(WC)):
             try:
-                WC2 = list(WCs.keys())[idx2]
+                WC2 = list(WC.keys())[idx2]
             except:
-                WC2 = WCs[idx2]
+                WC2 = WC[idx2]
             value = C[WC1+WC2]
             M[idx1, idx2] = value
     return(M)

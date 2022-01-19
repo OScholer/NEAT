@@ -3,8 +3,9 @@
 
 # In[1]:
 
-
+import warnings
 import numpy as np
+import matplotlib as mplt
 from matplotlib import pyplot as plt
 import scipy.constants
 from scipy import optimize
@@ -1289,8 +1290,9 @@ class LEFT(object):
     #                                                                                                  #
     ####################################################################################################
     
-    def spectra(self, Ebar, isotope = "76Ge", method=None, amp=None):
-        
+    def spectrum(self, Ebar, isotope = "76Ge", WC = None, method=None):#, amp=None):
+        if WC == None:
+            WC = self.WC.copy()
         #set the method and import NMEs if necessary
         if method == None:
             method = self.method
@@ -1301,7 +1303,7 @@ class LEFT(object):
             #self.method = method
             #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
         elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
             method = self.method
         else:
             pass
@@ -1313,8 +1315,8 @@ class LEFT(object):
         element = self.elements[isotope]
         
         #if not initialized calculate amplitudes
-        if amp == None:
-            amp = self.amplitudes(isotope, self.WC, method)[0]
+        #if amp == None:
+        amp = self.amplitudes(isotope, WC = WC, method = method)[0]
         
         #electron mass in MeV
         #m_e = pc["electron mass energy equivalent in MeV"][0]
@@ -1342,8 +1344,9 @@ class LEFT(object):
                           + g_06_rescaling * element.g_06(E, Delta_M - E) * ((amp["nu"]-amp["R"])*np.conj(amp["M"])).real)* p(E)*p(Delta_M-E)* E * (Delta_M - E)
         return(result)
 
-    def angular_corr(self, Ebar, isotope = "76Ge", method=None, amp = None):
-        
+    def angular_corr(self, Ebar, isotope = "76Ge", WC = None, method=None):#, amp = None):
+        if WC == None:
+            WC = self.WC.copy()
         #set the method and import NMEs if necessary
         if method == None:
             method = self.method
@@ -1354,7 +1357,7 @@ class LEFT(object):
             #self.method = method
             #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
         elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
             method = self.method
         else:
             method = self.method
@@ -1367,8 +1370,8 @@ class LEFT(object):
         element = self.elements[isotope]
         
         #if not initialized calculate amplitudes
-        if amp == None:
-            amp = self.amplitudes(isotope, self.WC, method)[0]
+        #if amp == None:
+        amp = self.amplitudes(isotope, WC = WC, method = method)[0]
             
         #electron mass in MeV
         #m_e = pc["electron mass energy equivalent in MeV"][0]
@@ -1446,7 +1449,7 @@ class LEFT(object):
         return(hl)
     
     
-    def ratios(self, save = False, plot = False, reference_isotope = "76Ge", 
+    def ratios(self, savefig = False, plot = False, reference_isotope = "76Ge", 
                normalized = True, method=None, vary = False, n_points = 100, addgrid = True):
     #returns the half-live ratios compared to the standard mass mechanism based on the chosen reference isotope
     #can optionally also generate a plot of the ratios and save them as "ratios_"+self.name+".png"
@@ -1623,7 +1626,7 @@ class LEFT(object):
             plt.tight_layout()
             if addgrid:
                 plt.grid(linestyle = "--")
-        if save and plot:
+        if savefig and plot:
             plt.savefig("ratios_"+self.name+".png", dpi=300)
         if plot:
             return(fig)
@@ -1632,7 +1635,7 @@ class LEFT(object):
         return(self.ratio_values)
     
     
-    def PSF_plot(self, isotope="76Ge", save=False, method=None):
+    def PSF_plot(self, isotope="76Ge", savegif=False, method=None):
         #generates plots of the PSF observables
         #i.e. angular corr. and single e spectrum
         
@@ -1676,16 +1679,16 @@ class LEFT(object):
         Amplitude_mbb, _ = self.amplitudes(isotope, WC_mbb)
         
         #normalization factors for single electron d
-        integral = integrate.quad(lambda E: self.spectra(E, Amplitude, isotope = isotope), 0, 1)
-        integral_mbb = integrate.quad(lambda E: self.spectra(E, Amplitude_mbb, isotope = isotope), 0, 1)
+        integral = integrate.quad(lambda E: self.spectrum(E, Amplitude, isotope = isotope), 0, 1)
+        integral_mbb = integrate.quad(lambda E: self.spectrum(E, Amplitude_mbb, isotope = isotope), 0, 1)
         
         #generate figures
         plt.figure()
         plt.title("Single Electron Spectrum")
-        plt.plot(Ebar, self.spectra(Ebar, amp = Amplitude, isotope = isotope)/integral[0], "b", label = r"$m_{\beta\beta}$")
-        plt.plot(Ebar, self.spectra(Ebar, amp = Amplitude_mbb, isotope = isotope)/integral_mbb[0], "r", label = self.name)
+        plt.plot(Ebar, self.spectrum(Ebar, amp = Amplitude, isotope = isotope)/integral[0], "b", label = r"$m_{\beta\beta}$")
+        plt.plot(Ebar, self.spectrum(Ebar, amp = Amplitude_mbb, isotope = isotope)/integral_mbb[0], "r", label = self.name)
         plt.legend(fontsize = 20)
-        if save:
+        if savefig:
             plt.savefig("spectra_"+isotope+"_"+self.name+".png", dpi = 300)
         
         plt.figure()
@@ -1694,10 +1697,12 @@ class LEFT(object):
         plt.plot(Ebar, self.angular_corr(Ebar, amp = Amplitude, isotope = isotope), "r", label = self.name)
         plt.legend()
         
-        if save:
+        if savefig:
             plt.savefig("angular_correlation_"+isotope+"_"+self.name+".png", dpi = 300)
             
-    def plot_spec(self, isotope="76Ge", save=False, method=None, print_title = False, addgrid = True, show_mbb = True):
+    def plot_spec(self, isotope="76Ge", WC = None, method=None, print_title = False, addgrid = True, show_mbb = True, savefig=False, file = "spec.png"):
+        if WC == None:
+            WC = self.WC.copy()
         #generates a plot of the single electron spectrum
         
         #set the method and import NMEs if necessary
@@ -1705,14 +1710,13 @@ class LEFT(object):
             pass
         elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
             print("Changing method to",method)
-            self.method = method
-            self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
         elif method not in ["IBM2", "QRPA", "SM"]:
             print("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
         else:
+            method = self.method
             pass
             
-        method = self.method
         
         #generate WC dict for mass mechanism
         if show_mbb:
@@ -1736,22 +1740,22 @@ class LEFT(object):
         Ebar = (E-self.m_e_MEV)/(element.Delta_M-2*self.m_e_MEV)
         
         #calculate amplitudes for a model and mass mechanism
-        Amplitude, _ = self.amplitudes(isotope, self.WC)
-        if show_mbb:
-            Amplitude_mbb, _ = self.amplitudes(isotope, WC_mbb)
+        #Amplitude, _ = self.amplitudes(isotope, self.WC)
+        #if show_mbb:
+        #    Amplitude_mbb, _ = self.amplitudes(isotope, WC_mbb)
         
         #normalization factors for single electron spectra
-        integral = integrate.quad(lambda E: self.spectra(E, Amplitude, isotope = isotope), 0, 1)
+        integral = integrate.quad(lambda E: self.spectrum(E, isotope = isotope, WC = WC, method = method), 0, 1)
         if show_mbb:
-            integral_mbb = integrate.quad(lambda E: self.spectra(E, Amplitude_mbb, isotope = isotope), 0, 1)
+            integral_mbb = integrate.quad(lambda E: self.spectrum(E, isotope = isotope, WC = WC_mbb, method = method), 0, 1)
         
         #generate figures
         fig = plt.figure(figsize=(6.4*1.85, 4.8*2))
         if print_title:
             plt.title("Single Electron Spectrum")
-        spec = self.spectra(Ebar, amp = Amplitude, isotope = isotope)/integral[0]
+        spec = self.spectrum(Ebar, WC = WC, isotope = isotope, method = method)/integral[0]
         if show_mbb:
-            spec_mbb = self.spectra(Ebar, amp = Amplitude_mbb, isotope = isotope)/integral_mbb[0]
+            spec_mbb = self.spectrum(Ebar, WC = WC_mbb, isotope = isotope, method = method)/integral_mbb[0]
         if show_mbb:
             plt.plot(Ebar, spec_mbb, "r", label = r"$m_{\beta\beta}$")
         plt.plot(Ebar, spec, "b", label = self.name)
@@ -1767,27 +1771,32 @@ class LEFT(object):
         plt.ylabel(r"$\frac{\mathrm{d}\Gamma}{\mathrm{d}\epsilon}$", fontsize = 20)
         if addgrid:
             plt.grid(linestyle = "--")
-        if save:
-            plt.savefig("spectra_"+isotope+"_"+self.name+".png", dpi = 300)
+        if savefig:
+            plt.savefig(file, dpi = 300)
         return(fig)
             
-    def plot_corr(self, isotope="76Ge", save=False, method=None, print_title = False, addgrid = True, show_mbb = True):
+    def plot_corr(self, isotope="76Ge", WC = None, method=None,
+                  print_title = False, addgrid = True, show_mbb = True, 
+                  savefig=False, file = "angular_corr.png"):
         #generates a plot of the angular correlation coefficient
-        
+        if WC == None:
+            WC = self.WC.copy()
         
         #set the method and import NMEs if necessary
         if method == None:
+            method = self.method
             pass
         elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
             print("Changing method to",method)
-            self.method = method
-            self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+            method = method
         elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
         else:
+            method = self.method
             pass
             
-        method = self.method
+        
         
         #generate WC dict for mass mechanism
         if show_mbb:
@@ -1811,17 +1820,17 @@ class LEFT(object):
         Ebar = (E-self.m_e_MEV)/(element.Delta_M-2*self.m_e_MEV)
         
         #calculate amplitudes for a model and mass mechanism
-        Amplitude, _ = self.amplitudes(isotope, self.WC)
-        if show_mbb:
-            Amplitude_mbb, _ = self.amplitudes(isotope, WC_mbb)
+        #Amplitude, _ = self.amplitudes(isotope, self.WC)
+        #if show_mbb:
+        #    Amplitude_mbb, _ = self.amplitudes(isotope, WC_mbb)
         
         #generate figures            
         fig = plt.figure(figsize=(6.4*1.85, 4.8*2))
         if print_title:
             plt.title("Angular Correlation")
         if show_mbb:
-            a_corr_mbb = self.angular_corr(Ebar, amp = Amplitude_mbb, isotope = isotope)
-        a_corr = self.angular_corr(Ebar, amp = Amplitude, isotope = isotope)
+            a_corr_mbb = self.angular_corr(Ebar, WC = WC_mbb, isotope = isotope, method = method)
+        a_corr = self.angular_corr(Ebar, WC = WC, isotope = isotope, method = method)
         if show_mbb:
             plt.plot(Ebar, a_corr_mbb, "r", label = r"$m_{\beta\beta}$")
         plt.plot(Ebar, a_corr, "b", label = self.name)
@@ -1834,8 +1843,8 @@ class LEFT(object):
         plt.ylabel(r"$\frac{a_1}{a_0}$", fontsize = 20)
         if addgrid:
             plt.grid(linestyle = "--")
-        if save:
-            plt.savefig("angular_correlation_"+isotope+"_"+self.name+".png", dpi = 300)
+        if savefig:
+            plt.savefig(file, dpi = 300)
         return(fig)
     
     def get_limits2(self, half_live, isotope = "76Ge", basis = None, method = None, onlygroups = False):
@@ -2029,7 +2038,7 @@ class LEFT(object):
     
     #fancy plots:
     def _m_bb(self, alpha, m_min=1, ordering="NO", dcp=1.36):
-        #this function returns m_bb from m_min
+        #this function returns the effective Majorana mass m_bb from m_min for a fixed mass ordering
         
         #majorana phases
         alpha1=alpha[0]
@@ -2486,9 +2495,14 @@ class LEFT(object):
                 else:
                     return ([NO_min_eff*1e+9, NO_max_eff*1e+9])
         
-    def plot_m_eff(self, m_cosmo = 0.15, x_min = 1e-4, x_max = 1e+0, y_min=None, y_max=None, n_dots = 100, 
-                   isotope = "76Ge", cosmo = False, experiments = None, ordering="both", savefig=False, 
-                   numerical_method="Powell", compare_to_mass = False, normalize_to_mass = False, vary_WC  = "m_min"):#, varyLECs = False):
+    def plot_m_eff(self, vary_WC  = "m_min", isotope = "76Ge", x_min = 1e-4, x_max = 1e+0, 
+                   y_min=None, y_max=None, n_dots = 100, cosmo = False, m_cosmo = 0.15, 
+                   experiments = None, ordering="both", numerical_method="Powell", 
+                   compare_to_mass = False, normalize_to_mass = False, 
+                   colorNO = "b", colorIO = "r", alpha_plot = 0.5, alpha_mass = 0.05, alpha_cosmo = 0.1,
+                   return_points = False, savefig=False, file = "m_eff.png"):
+        
+        colors = [colorNO, colorIO]
         
         if vary_WC == "m_sum":
             x_min = np.max([x_min, f.m_min_to_m_sum(0)["NO"]])
@@ -2528,8 +2542,8 @@ class LEFT(object):
         IO_min = np.zeros(n_dots)
         IO_max = np.zeros(n_dots)
         
-        if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
-            print("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+        if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
         if compare_to_mass or normalize_to_mass:
             NO_min_mbb = np.zeros(n_dots)
@@ -2540,7 +2554,7 @@ class LEFT(object):
 
         for idx in range(n_dots):
             m_min = M[idx]
-            if vary_WC  == "m_min" or vary_WC == "m_sum":
+            if vary_WC  in ["m_min", "m_sum"]:
                 [NO_min[idx], NO_max[idx]], [IO_min[idx], IO_max[idx]] = self._m_eff_minmax(m_min, 
                                                                                         isotope, 
                                                                                         ordering=ordering, 
@@ -2554,35 +2568,35 @@ class LEFT(object):
                     [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._m_eff_minmax(m_min, 
                                                                                         isotope, 
                                                                                         normalize_to_mass = normalize_to_mass, 
-                                                                                        vary_WC  = vary_WC )#, varyLECs = varyLECs)
+                                                                                        vary_WC  = "m_min" )#, varyLECs = varyLECs)
                     self.WC = WCbackup.copy()
                     
-            elif vary_WC == "m_sum":
-                [NO_min[idx], NO_max[idx]] = self._m_eff_minmax(MNO[idx], 
-                                                                isotope, 
-                                                                ordering="NO", 
-                                                                normalize_to_mass = normalize_to_mass, 
-                                                                vary_WC  = vary_WC )#, 
-                
-                [IO_min[idx], IO_max[idx]] = self._m_eff_minmax(MIO[idx], 
-                                                                isotope, 
-                                                                ordering="IO", 
-                                                                normalize_to_mass = normalize_to_mass, 
-                                                                vary_WC  = vary_WC )
-                #varyLECs = varyLECs)
-                if compare_to_mass or normalize_to_mass:
-                    WCbackup = self.WC.copy()
-                    for operator in self.WC:
-                        self.WC[operator]=0
-                    [NO_min_mbb[idx], NO_max_mbb[idx]] = self._m_eff_minmax(MNO[idx], 
-                                                                            isotope, ordering = "NO",
-                                                                            normalize_to_mass = normalize_to_mass, 
-                                                                            vary_WC  = vary_WC )#, varyLECs = varyLECs)
-                    [IO_min_mbb[idx], IO_max_mbb[idx]] = self._m_eff_minmax(MIO[idx], 
-                                                                            isotope, ordering = "IO",
-                                                                            normalize_to_mass = normalize_to_mass, 
-                                                                            vary_WC  = vary_WC )#, varyLECs = varyLECs)
-                    self.WC = WCbackup.copy()
+#            elif vary_WC == "m_sum":
+#                [NO_min[idx], NO_max[idx]] = self._m_eff_minmax(MNO[idx], 
+#                                                                isotope, 
+#                                                                ordering="NO", 
+#                                                                normalize_to_mass = normalize_to_mass, 
+#                                                                vary_WC  = vary_WC )#, 
+#                
+#                [IO_min[idx], IO_max[idx]] = self._m_eff_minmax(MIO[idx], 
+#                                                                isotope, 
+#                                                                ordering="IO", 
+#                                                                normalize_to_mass = normalize_to_mass, 
+#                                                                vary_WC  = vary_WC )
+#                #varyLECs = varyLECs)
+#                if compare_to_mass or normalize_to_mass:
+#                    WCbackup = self.WC.copy()
+#                    for operator in self.WC:
+#                        self.WC[operator]=0
+#                    [NO_min_mbb[idx], NO_max_mbb[idx]] = self._m_eff_minmax(MNO[idx], 
+#                                                                            isotope, ordering = "NO",
+#                                                                            normalize_to_mass = normalize_to_mass, 
+#                                                                            vary_WC  = vary_WC )#, varyLECs = varyLECs)
+#                    [IO_min_mbb[idx], IO_max_mbb[idx]] = self._m_eff_minmax(MIO[idx], 
+#                                                                            isotope, ordering = "IO",
+#                                                                            normalize_to_mass = normalize_to_mass, 
+#                                                                            vary_WC  = vary_WC )#, varyLECs = varyLECs)
+#                    self.WC = WCbackup.copy()
                     
             else:
                 
@@ -2632,64 +2646,102 @@ class LEFT(object):
                 #print(IO_min)
 
         fig = plt.figure(figsize=(9,8))
-        if vary_WC == "m_min" or vary_WC == "m_sum":
+        if vary_WC  in ["m_min", "m_sum"]:
             NO_label = "NO"
             IO_label =  "IO"
         else:
             NO_label = None
             IO_label =  None
-        if ordering == "NO":
-            if vary_WC != "m_sum":
-                plt.plot(M,NO_min, "b")
-                plt.plot(M,NO_max, "b")
-                plt.fill_between(M, NO_max, NO_min, color="b", alpha=0.5, label = NO_label)
-            else:
-                plt.plot(MNOsum,NO_min, "b")
-                plt.plot(MNOsum,NO_max, "b")
-                plt.fill_between(MNO, NO_max, NO_min, color="b", alpha=0.5, label = NO_label)
-        elif ordering == "IO" and vary_WC == "m_min":
-            if vary_WC != "m_sum":
-                plt.plot(M,IO_min, "r")
-                plt.plot(M,IO_max, "r")
-                plt.fill_between(M, IO_max, IO_min, color="b", alpha=0.5, label = IO_label)
-            else:
-                plt.plot(MIOsum,IO_min, "r")
-                plt.plot(MIOsum,IO_max, "r")
-                plt.fill_between(MIOsum, IO_max, IO_min, color="b", alpha=0.5, label = IO_label)
+            
+        if vary_WC != "m_sum":
+            xNO = M
+            xIO = M
         else:
-            if vary_WC != "m_sum":
-                plt.plot(M,NO_min, "b")
-                plt.plot(M,NO_max, "b")
-                plt.plot(M,IO_min, "r")
-                plt.plot(M,IO_max, "r")
-                plt.fill_between(M, NO_max, NO_min, color="b", alpha=0.5, label = NO_label)
-                if vary_WC == "m_min":
-                    plt.fill_between(M, IO_max, IO_min, color="r", alpha=0.5, label = IO_label)
-            else:
-                plt.plot(MNOsum,NO_min, "b")
-                plt.plot(MNOsum,NO_max, "b")
-                plt.plot(MIOsum,IO_min, "r")
-                plt.plot(MIOsum,IO_max, "r")
-                plt.fill_between(MNOsum, NO_max, NO_min, color="b", alpha=0.5, label = NO_label)
-                plt.fill_between(MIOsum, IO_max, IO_min, color="r", alpha=0.5, label = IO_label)
+            xNO = MNOsum
+            xIO = MIOsum
+            
+        if ordering == "NO":
+            plt.plot(xNO,NO_min, colors[0], linewidth = 1)
+            plt.plot(xNO,NO_max, colors[0], linewidth = 1)
+            plt.fill_between(xNO, NO_max, NO_min, linewidth = 1, 
+                             facecolor = list(mplt.colors.to_rgb(colors[0]))+[alpha_plot],
+                             edgecolor = list(mplt.colors.to_rgb(colors[0]))+[1],
+                             label = NO_label)
+            
+        elif ordering == "IO" and (vary_WC == "m_min" or vary_WC == "m_sum"):
+            
+            plt.plot(xIO,IO_min, colors[1], linewidth = 1)
+            plt.plot(xIO,IO_max, colors[1], linewidth = 1)
+            plt.fill_between(xIO, IO_max, IO_min, linewidth = 1, 
+                             facecolor = list(mplt.colors.to_rgb(colors[1]))+[alpha_plot],
+                             edgecolor = list(mplt.colors.to_rgb(colors[1]))+[1],
+                             label = IO_label)
+            
+        else:
+            
+            plt.plot(xNO,NO_min, colors[0], linewidth = 1)
+            plt.plot(xNO,NO_max, colors[0], linewidth = 1)
+            plt.fill_between(xNO, NO_max, NO_min, linewidth = 1, 
+                             facecolor = list(mplt.colors.to_rgb(colors[0]))+[alpha_plot],
+                             edgecolor = list(mplt.colors.to_rgb(colors[0]))+[1],
+                             label = NO_label)
+            if vary_WC in ["m_min", "m_sum"]:
+                plt.plot(xIO,IO_min, colors[1], linewidth = 1)
+                plt.plot(xIO,IO_max, colors[1], linewidth = 1)
+                plt.fill_between(xIO, IO_max, IO_min, linewidth = 1, 
+                                 facecolor = list(mplt.colors.to_rgb(colors[1]))+[alpha_plot],
+                                 edgecolor = list(mplt.colors.to_rgb(colors[1]))+[1],
+                                 label = IO_label)
+            #else:
+            #    plt.plot(xNO,NO_min, colors[0], linewidth = 1)
+            #    plt.plot(xNO,NO_max, colors[0], linewidth = 1)
+            #    plt.plot(xIO,IO_min, colors[1], linewidth = 1)
+            #    plt.plot(xIO,IO_max, colors[1], linewidth = 1)
+            #    plt.fill_between(xNO, NO_max, NO_min, linewidth = 1, 
+            #                     facecolor = list(mplt.colors.to_rgb(colors[0]))+[alpha_plot],
+            #                     edgecolor = list(mplt.colors.to_rgb(colors[0]))+[1],
+            #                     label = NO_label)
+            #    plt.fill_between(xNO, IO_max, IO_min, linewidth = 1, 
+            #                     facecolor = list(mplt.colors.to_rgb(colors[1]))+[alpha_plot],
+            #                     edgecolor = list(mplt.colors.to_rgb(colors[1]))+[1],
+            #                     label = IO_label)
         
         if compare_to_mass:
             if ordering == "NO":
-                plt.plot(M,NO_min_mbb, "grey")
-                plt.plot(M,NO_max_mbb, "grey")
-                plt.fill_between(M, NO_max_mbb, NO_min_mbb, color="k", alpha=0.1, label = r"$m_{\beta\beta}$")
+                #if vary_WC != "m_sum":
+                plt.plot(xNO,NO_min_mbb, "k", linewidth = 1)
+                plt.plot(xNO,NO_max_mbb, "k", linewidth = 1)
+                plt.fill_between(M, NO_max_mbb, NO_min_mbb, 
+                                 linewidth = 1, 
+                                 facecolor = [0,0,0, alpha_mass],
+                                 edgecolor = [0,0,0,1],
+                                 label = r"$m_{\beta\beta}$")
                 
-            elif ordering == "IO" and vary_WC == "m_min":
-                plt.plot(M,IO_min_mbb, "grey")
-                plt.plot(M,IO_max_mbb, "grey")
-                plt.fill_between(M, IO_max_mbb, IO_min_mbb, color="k", alpha=0.1, label=r"$m_{\beta\beta}$")
+            elif ordering == "IO" and (vary_WC == "m_min" or vary_WC == "m_sum"):
+                #if vary_WC != "m_sum":
+                plt.plot(xIO_min_mbb, "k", linewidth = 1)
+                plt.plot(xIO,IO_max_mbb, "k", linewidth = 1)
+                plt.fill_between(M, IO_max_mbb, IO_min_mbb, 
+                                 linewidth = 1, 
+                                 facecolor = [0,0,0, alpha_mass],
+                                 edgecolor = [0,0,0,1],
+                                 label=r"$m_{\beta\beta}$")
+                
             else:
-                plt.plot(M,NO_min_mbb, "grey")
-                plt.plot(M,NO_max_mbb, "grey")
-                plt.plot(M,IO_min_mbb, "grey")
-                plt.plot(M,IO_max_mbb, "grey")
-                plt.fill_between(M, IO_max_mbb, IO_min_mbb, color="k", alpha=0.1, label=r"$m_{\beta\beta}$")
-                plt.fill_between(M, NO_max_mbb, NO_min_mbb, color="k", alpha=0.1)
+                #f vary_WC != "m_sum":
+                plt.plot(xNO,NO_min_mbb, "k", linewidth = 1)
+                plt.plot(xNO,NO_max_mbb, "k", linewidth = 1)
+                plt.plot(xIO,IO_min_mbb, "k", linewidth = 1)
+                plt.plot(xIO,IO_max_mbb, "k", linewidth = 1)
+                plt.fill_between(xIO, IO_max_mbb, IO_min_mbb, 
+                                 linewidth = 1, 
+                                 facecolor = [0,0,0, alpha_mass],
+                                 edgecolor = [0,0,0,1],
+                                 label=r"$m_{\beta\beta}$")
+                plt.fill_between(xNO, NO_max_mbb, NO_min_mbb, 
+                                 linewidth = 1, 
+                                 facecolor = [0,0,0, alpha_mass],
+                                 edgecolor = [0,0,0,1])
 
         
         if y_max == None:
@@ -2715,7 +2767,7 @@ class LEFT(object):
             plt.xlim(x_min,x_max)
         else:
             plt.xlim(MNOsum[0],MNOsum[-1])
-        if vary_WC == "m_min":
+        if vary_WC in ["m_min", "m_sum"]:
             plt.legend(fontsize=20)
         if normalize_to_mass:
             plt.ylabel(r"$\left|\frac{m_{\beta\beta}^{eff}}{m_{\beta\beta}}\right|$", fontsize=20)
@@ -2732,22 +2784,67 @@ class LEFT(object):
                 plt.xlabel(r"$|C_{"+vary_WC[:-3]+"}^{"+vary_WC[-3:]+"}|$", fontsize=20)
         plt.tight_layout()
         if cosmo:
-            def m_sum(m_min):
-                m21 = 7.53e-5
-                m32 = 2.453e-3
-                msum = m_min + np.sqrt(m_min**2+m21) + np.sqrt(m_min**2 + m21 + m32)
-                return(msum-m_cosmo)
-            cosmo_limit = scipy.optimize.root(m_sum, x0 = 0.05).x[0]
+            if vary_WC != "m_sum":
+                def m_sum(m_min):
+                    m21 = 7.53e-5
+                    m32 = 2.453e-3
+                    msum = m_min + np.sqrt(m_min**2+m21) + np.sqrt(m_min**2 + m21 + m32)
+                    return(msum-m_cosmo)
+                cosmo_limit = scipy.optimize.root(m_sum, x0 = 0.05).x[0]
+            else:
+                cosmo_limit = m_cosmo
             #print(cosmo_limit)
             m_cosmo
-            plt.fill_betweenx([y_min,y_max], [1], [cosmo_limit], alpha=0.2, color="k")
+            plt.fill_betweenx([y_min,y_max], [x_max], [cosmo_limit], alpha=alpha_cosmo, color="k")
         if experiments != None:
             for experiment in experiments:
-                plt.axhline(experiments[experiment], linewidth = 1)
-                plt.text(x = 1e-3, y = experiments[experiment], s = experiment)
+                try:
+                    y_data = experiments[experiment][0]
+                except:
+                    y_data = experiments[experiment]
+                #try:
+                #    isot = experiments[experiment][1]
+                #except:
+                #    isot = "76Ge"
+                #convert half-life into m_bb limit
+                y_data = self.get_limits2(y_data, isotope = isotope)[0]["m_bb"]*1e+9
+                try:
+                    color     = experiments[experiment][1]
+                except:
+                    color = "grey"
+                try:
+                    plot_type = experiments[experiment][2]
+                except:
+                    plot_type = "line"
+                try:
+                    alpha     = experiments[experiment][3]
+                except:
+                    if plot_type == "fill":
+                        alpha = 0.25
+                    else:
+                        alpha = 1
+                if plot_type == "line":
+                    plt.axhline(y_data, linewidth = 1, color = color, alpha = alpha)
+                    plt.text(x = x_min, y = y_data, s = experiment, fontsize = 15)
+                elif plot_type == "fill":
+                    plt.fill_between(M, y_max, y_data, color = color, alpha = alpha)
+                    plt.text(x = x_min, y = y_data, s = experiment, fontsize = 15)
+                else:
+                    print("plot_type", plot_type, "unknown. Doing a line Plot")
+                    plt.axhline(1/y_data, linewidth = 1, color = color, alpha = alpha)
+                    plt.text(x = x_min, y = y_data, s = experiment, fontsize = 15)
         if savefig:
-            plt.savefig("m_eff.png", dpi=300)
-        return(fig)
+            plt.savefig(file, dpi=300)
+        if return_points:
+            points = {"xNO"   : xNO, 
+                      "xIO"   : xIO, 
+                      "y1NO"  : NO_min, 
+                      "y2NO"  : NO_max, 
+                      "y1IO"  : IO_min, 
+                      "y2IO"  : IO_max}
+            return(fig, points)
+        else:
+            return(fig)
     
     def _t_half(self, 
                 alpha, 
@@ -2851,18 +2948,55 @@ class LEFT(object):
                 return([t_half_min_NO, t_half_max_NO])
                 
         
-    def plot_t_half_inv(self, m_cosmo = 0.15, x_min = 1e-4, x_max = 1e+0, y_min=None, y_max=None, n_dots = 100, 
-                        isotope = "76Ge", cosmo = False, experiments = None, ordering="both", savefig=True, dcp=1.36,
-                        numerical_method="Powell", compare_to_mass = False, normalize_to_mass = False, vary_WC = "m_min"):
-        #model=EFT.LEFT(WC)
-        M = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), n_dots)
-
+    def plot_t_half_inv(self, vary_WC = "m_min", isotope = "76Ge", x_min = 1e-4, x_max = 1e+0, 
+                        y_min=None, y_max=None, n_dots = 100, cosmo = False, m_cosmo = 0.15, 
+                        experiments = None, ordering="both", dcp=1.36,
+                        numerical_method="Powell", compare_to_mass = False, normalize_to_mass = False, 
+                        colorNO = "b", colorIO = "r", alpha_plot = 0.5, alpha_mass = 0.05, alpha_cosmo = 0.1,
+                        return_points = False, savefig=False, file = "decay_rate.png"):
+         
+        colors = [colorNO, colorIO]
+        
+        if vary_WC == "m_sum":
+            x_min = np.max([x_min, f.m_min_to_m_sum(0)["NO"]])
+            x_max = np.max([x_max, f.m_min_to_m_sum(0)["NO"]])
+            Msum = np.logspace(np.log10(x_min), np.log10(x_max), n_dots)
+            #print(Msum)
+            M = Msum.copy()
+            for idx in range(n_dots):
+                M[idx] = f.m_sum_to_m_min(Msum[idx])["NO"]
+            #x_min = np.max([f.m_sum_to_m_min(x_min)["NO"], 1e-10])
+            #x_max = np.max([f.m_sum_to_m_min(x_max)["NO"], 1e-10])
+            #Msum = np.logspace(x_min, x_max, n_dots)
+            
+            #print(x_min)
+            #print(x_max)
+        
+        #M = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), n_dots)
+        else:
+            M = np.logspace((np.log10(x_min)),(np.log10(x_max)), n_dots)
+        
+        if vary_WC == "m_sum":
+            #Msum = M.copy()
+            MNOsum = M.copy()
+            MIOsum = M.copy()
+            #MNO = M.copy()
+            #MIO = M.copy()
+            for idx in range(len(M)):
+                #m_min    = f.m_sum_to_m_min(Msum[idx])
+                #MNO[idx] = m_min["NO"]
+                #MIO[idx] = m_min["IO"]
+                m_sum = f.m_min_to_m_sum(M)
+                MNOsum = m_sum["NO"]
+                MIOsum = m_sum["IO"]
+        
+        
         NO_min = np.zeros(n_dots)
         NO_max = np.zeros(n_dots)
         IO_min = np.zeros(n_dots)
         IO_max = np.zeros(n_dots)
-        if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
-            print("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+        if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
         
         if compare_to_mass or normalize_to_mass:
@@ -2872,13 +3006,13 @@ class LEFT(object):
             IO_max_mbb = np.zeros(n_dots)
 
         for idx in range(n_dots):
-            if vary_WC == "m_min":
+            if vary_WC  in ["m_min", "m_sum"]:
                 m_min = M[idx]
                 [NO_min[idx], NO_max[idx]], [IO_min[idx], IO_max[idx]] = self._t_half_minmax(m_min=m_min, 
                                                                                       isotope=isotope, ordering=ordering, 
                                                                                        dcp=dcp, numerical_method=numerical_method, 
                                                                                              normalize_to_mass = normalize_to_mass, 
-                                                                                             vary_WC = vary_WC)
+                                                                                             vary_WC = "m_min")
                 if compare_to_mass:
                     WCbackup = self.WC.copy()
                     for operator in self.WC:
@@ -2890,7 +3024,7 @@ class LEFT(object):
                                                                                                                  dcp=dcp,
                                                                                                                   numerical_method=numerical_method, 
                                                                                              normalize_to_mass = normalize_to_mass, 
-                                                                                             vary_WC = vary_WC)
+                                                                                             vary_WC = "m_min")
 
                     self.WC = WCbackup.copy()
                     
@@ -2926,55 +3060,77 @@ class LEFT(object):
             NO_max_mbb = 1/np.absolute(NO_max_mbb)
             IO_min_mbb = 1/np.absolute(IO_min_mbb)
             IO_max_mbb = 1/np.absolute(IO_max_mbb)
-            #if normalize_to_mass:
-            #    
-            #    NO_min_mbb -=1
-            #    NO_max_mbb -=1
-            #    IO_min_mbb -=1
-            #    IO_max_mbb -=1
-            #    NO_min -=1
-            #    NO_max -=1
-            #    IO_min -=1
-            #    IO_max -=1
+            
         if y_max == None:
-            if vary_WC == "m_min":
+            if vary_WC in ["m_min", "m_sum"]:
                 y_max = np.max([np.max(IO_max), np.max(NO_max)])
             else:
                 y_max = np.max(NO_max)
             y_max = 10**np.ceil(np.log10(y_max))
         if y_min == None:
-            if vary_WC == "m_min":
+            if vary_WC in ["m_min", "m_sum"]:
                 y_min = np.max([10**np.floor(np.log10(np.min([np.min(NO_max), np.min(IO_max)]))),1e-8*y_max])
             else:
                 y_min = np.max([10**np.floor(np.log10(np.min(NO_max))),1e-8*y_max])
             #y_min = 10**np.round(np.log10(y_min))
-
+        
+        
+        
+        
         fig = plt.figure(figsize=(9,8))
-        plt.plot(M,NO_min, "b")
-        plt.plot(M,NO_max, "b")
+        if vary_WC in ["m_min", "m_sum"]:
+            NO_label = "NO"
+            IO_label =  "IO"
+        else:
+            NO_label = None
+            IO_label =  None
+            
+        if vary_WC != "m_sum":
+            xNO = M
+            xIO = M
+        else:
+            xNO = MNOsum
+            xIO = MIOsum
+            
+        plt.plot(xNO,NO_min, colors[0], linewidth = 1)
+        plt.plot(xNO,NO_max, colors[0], linewidth = 1)
 
-        plt.plot(M,IO_min, "r")
-        plt.plot(M,IO_max, "r")
+        plt.plot(xIO,IO_min, colors[1], linewidth = 1)
+        plt.plot(xIO,IO_max, colors[1], linewidth = 1)
 
-        plt.fill_between(M, IO_max, IO_min, color="r", alpha=0.5, label="IO")
-        plt.fill_between(M, NO_max, NO_min, color="b", alpha=0.5, label="NO")
+        plt.fill_between(xIO, IO_max, IO_min, linewidth = 1, 
+                         facecolor = list(mplt.colors.to_rgb(colors[1]))+[alpha_plot],
+                         edgecolor = list(mplt.colors.to_rgb(colors[1]))+[1],
+                         label="IO")
+        plt.fill_between(xNO, NO_max, NO_min, linewidth = 1, 
+                         facecolor = list(mplt.colors.to_rgb(colors[0]))+[alpha_plot],
+                         edgecolor = list(mplt.colors.to_rgb(colors[0]))+[1],
+                         label="NO")
+        
         
         if compare_to_mass:
             
-            plt.plot(M,NO_min_mbb, "grey")
-            plt.plot(M,NO_max_mbb, "grey")
+            plt.plot(xNO,NO_min_mbb, "k")
+            plt.plot(xNO,NO_max_mbb, "k")
 
-            plt.plot(M,IO_min_mbb, "grey")
-            plt.plot(M,IO_max_mbb, "grey")
+            plt.plot(xIO,IO_min_mbb, "k")
+            plt.plot(xIO,IO_max_mbb, "k")
 
-            plt.fill_between(M, IO_max_mbb, IO_min_mbb, color="k", alpha=0.1, label=r"$m_{\beta\beta}$")
-            plt.fill_between(M, NO_max_mbb, NO_min_mbb, color="k", alpha=0.1)
+            plt.fill_between(xIO, IO_max_mbb, IO_min_mbb, 
+                             linewidth = 1, 
+                             facecolor = [0,0,0, alpha_mass],
+                             edgecolor = [0,0,0,1],
+                             label=r"$m_{\beta\beta}$")
+            plt.fill_between(xNO, NO_max_mbb, NO_min_mbb, 
+                             linewidth = 1, 
+                             facecolor = [0,0,0, alpha_mass],
+                             edgecolor = [0,0,0,1])
         
         plt.yscale("log")
         plt.xscale("log")
         plt.ylim(y_min,y_max)
         plt.xlim(x_min,x_max)
-        if vary_WC == "m_min":
+        if vary_WC in ["m_min", "m_sum"]:
             plt.legend(fontsize=20)
         if normalize_to_mass:
             plt.ylabel(r"$\frac{t_{1/2, m_{\beta\beta}}}{t_{1/2}}$", fontsize=20)
@@ -2982,43 +3138,124 @@ class LEFT(object):
             plt.ylabel(r"$t_{1/2}^{-1}$ [yr$^{-1}$]", fontsize=20)
         if vary_WC == "m_min":
             plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
+        elif vary_WC == "m_sum":
+            plt.xlabel(r"$\sum_i m_{i}$ [eV]", fontsize=20)
         else:
             if vary_WC == "m_bb":
                 plt.xlabel(r"$|m_{\beta\beta}|$ [eV]", fontsize=20)
             else:
                 plt.xlabel(r"$|C_{"+vary_WC[:-3]+"}^{"+vary_WC[-3:]+"}|$", fontsize=20)
+        
         plt.tight_layout()
+        
         if cosmo:
-            def m_sum(m_min):
-                m21 = 7.53e-5
-                m32 = 2.453e-3
-                msum = m_min + np.sqrt(m_min**2+m21) + np.sqrt(m_min**2 + m21 + m32)
-                return(msum-m_cosmo)
-            cosmo_limit = scipy.optimize.root(m_sum, x0 = 0.05).x[0]
+            if vary_WC != "m_sum":
+                def m_sum(m_min):
+                    m21 = 7.53e-5
+                    m32 = 2.453e-3
+                    msum = m_min + np.sqrt(m_min**2+m21) + np.sqrt(m_min**2 + m21 + m32)
+                    return(msum-m_cosmo)
+                cosmo_limit = scipy.optimize.root(m_sum, x0 = 0.05).x[0]
+            else:
+                cosmo_limit = m_cosmo
             #print(cosmo_limit)
             m_cosmo
-            plt.fill_betweenx([y_min, y_max], [1], [cosmo_limit], alpha=0.2, color="k")
-        #if experiments != None:
-        #    for experiment in experiments:
-        #        plt.axhline(experiments[experiment], linewidth = 1)
-        #        plt.text(x = 1e-3, y = experiments[experiment], s = experiment)
+            plt.fill_betweenx([y_min,y_max], [x_max], [cosmo_limit], alpha=alpha_cosmo, color="k")
+        
+        if experiments != None:
+            for experiment in experiments:
+                try:
+                    y_data = experiments[experiment][0]
+                except:
+                    y_data = experiments[experiment]
+                try:
+                    color     = experiments[experiment][1]
+                except:
+                    color = "grey"
+                try:
+                    plot_type = experiments[experiment][2]
+                except:
+                    plot_type = "line"
+                try:
+                    alpha     = experiments[experiment][3]
+                except:
+                    if plot_type == "fill":
+                        alpha = 0.25
+                    else:
+                        alpha = 1
+                if plot_type == "line":
+                    plt.axhline(1/y_data, linewidth = 1, color = color, alpha = alpha)
+                    plt.text(x = x_min, y = 1/y_data, s = experiment, fontsize = 15)
+                elif plot_type == "fill":
+                    plt.fill_between(M, y_max, 1/y_data, color = color, alpha = alpha)
+                    plt.text(x = x_min, y = 1/y_data, s = experiment, fontsize = 15)
+                else:
+                    print("plot_type", plot_type, "unknown. Doing a line Plot")
+                    plt.axhline(1/y_data, linewidth = 1, color = color, alpha = alpha)
+                    plt.text(x = x_min, y = 1/y_data, s = experiment, fontsize = 15)
+        #plt.tight_layout()
         if savefig:
-            plt.savefig("t_half_inv.png", dpi=300)
-        return(fig)
+            plt.savefig(file, dpi=300)
+        if return_points:
+            points = {"xNO"   : xNO, 
+                      "xIO"   : xIO, 
+                      "y1NO"  : NO_min, 
+                      "y2NO"  : NO_max, 
+                      "y1IO"  : IO_min, 
+                      "y2IO"  : IO_max}
+            return(fig, points)
+        else:
+            return(fig)
     
-    def plot_t_half(self, m_cosmo = 0.15, x_min = 1e-4, x_max = 1e+0, y_min=None, y_max=None, n_dots = 100, 
-                    isotope = "76Ge", cosmo = False, experiments = None, ordering="both", savefig=False, dcp=1.36,
-                    numerical_method="Powell", compare_to_mass = False, normalize_to_mass = False, vary_WC = "m_min"):
+    def plot_t_half(self, vary_WC = "m_min", x_min = 1e-4, x_max = 1e+0, y_min=None, y_max=None, 
+                    n_dots = 100, isotope = "76Ge", cosmo = False, m_cosmo = 0.15, 
+                    experiments = None, ordering="both", dcp=1.36, numerical_method="Powell", 
+                    compare_to_mass = False, normalize_to_mass = False, 
+                    colorNO = "b", colorIO = "r", alpha_plot = 0.5, alpha_mass = 0.05, alpha_cosmo = 0.1,
+                    return_points = False, savefig=False, file = "t_half.png"):
 
-        M = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), n_dots)
+        colors = [colorNO, colorIO]
+        
+        if vary_WC == "m_sum":
+            x_min = np.max([x_min, f.m_min_to_m_sum(0)["NO"]])
+            x_max = np.max([x_max, f.m_min_to_m_sum(0)["NO"]])
+            Msum = np.logspace(np.log10(x_min), np.log10(x_max), n_dots)
+            #print(Msum)
+            M = Msum.copy()
+            for idx in range(n_dots):
+                M[idx] = f.m_sum_to_m_min(Msum[idx])["NO"]
+            #x_min = np.max([f.m_sum_to_m_min(x_min)["NO"], 1e-10])
+            #x_max = np.max([f.m_sum_to_m_min(x_max)["NO"], 1e-10])
+            #Msum = np.logspace(x_min, x_max, n_dots)
+            
+            #print(x_min)
+            #print(x_max)
+        
+        #M = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), n_dots)
+        else:
+            M = np.logspace((np.log10(x_min)),(np.log10(x_max)), n_dots)
+            
+        if vary_WC == "m_sum":
+            #Msum = M.copy()
+            MNOsum = M.copy()
+            MIOsum = M.copy()
+            #MNO = M.copy()
+            #MIO = M.copy()
+            for idx in range(len(M)):
+                #m_min    = f.m_sum_to_m_min(Msum[idx])
+                #MNO[idx] = m_min["NO"]
+                #MIO[idx] = m_min["IO"]
+                m_sum = f.m_min_to_m_sum(M)
+                MNOsum = m_sum["NO"]
+                MIOsum = m_sum["IO"]
 
         NO_min = np.zeros(n_dots)
         NO_max = np.zeros(n_dots)
         IO_min = np.zeros(n_dots)
         IO_max = np.zeros(n_dots)
         
-        if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
-            print("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+        if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
         if compare_to_mass or normalize_to_mass:
             NO_min_mbb = np.zeros(n_dots)
@@ -3028,12 +3265,12 @@ class LEFT(object):
 
         for idx in range(n_dots):
             m_min = M[idx]
-            if vary_WC == "m_min":
+            if vary_WC in ["m_min", "m_sum"]:
                 [NO_min[idx], NO_max[idx]], [IO_min[idx], IO_max[idx]] = self._t_half_minmax(m_min=m_min, 
                                                                                       isotope=isotope, ordering=ordering, 
                                                                                        dcp=dcp, numerical_method=numerical_method,
                                                                                              normalize_to_mass = normalize_to_mass, 
-                                                                                             vary_WC = vary_WC)
+                                                                                             vary_WC = "m_min")
                 if compare_to_mass:
                     WCbackup = self.WC.copy()
                     for operator in self.WC:
@@ -3042,7 +3279,7 @@ class LEFT(object):
                     [NO_min_mbb[idx], NO_max_mbb[idx]], [IO_min_mbb[idx], IO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
                                                                                           isotope=isotope, ordering=ordering, 
                                                                                            dcp=dcp, numerical_method=numerical_method, normalize_to_mass = normalize_to_mass, 
-                                                                                             vary_WC = vary_WC)
+                                                                                             vary_WC = "m_min")
 
                     self.WC = WCbackup.copy()
             else:
@@ -3073,18 +3310,11 @@ class LEFT(object):
             NO_max_mbb = np.absolute(NO_max_mbb)
             IO_min_mbb = np.absolute(IO_min_mbb)
             IO_max_mbb = np.absolute(IO_max_mbb)
-            #if normalize_to_mass:
-            #    
-            #    NO_min_mbb -=1
-            #    NO_max_mbb -=1
-            #    IO_min_mbb -=1
-            #    IO_max_mbb -=1
-            #    NO_min -=1
-            #    NO_max -=1
-            #    IO_min -=1
-            #    IO_max -=1
+            
+        
+        
         if y_min == None:
-            if vary_WC == "m_min":
+            if vary_WC in ["m_min", "m_sum"]:
                 y_min = np.min([np.min(IO_max), np.min(NO_max)])
             else:
                 y_min = np.min(NO_max)
@@ -3096,32 +3326,58 @@ class LEFT(object):
             y_max = np.min([10**np.ceil(np.log10(np.max([NO_max, IO_max]))),1e+8*y_min])
 
         fig = plt.figure(figsize=(9,8))
-        plt.plot(M,NO_min, "b")
-        plt.plot(M,NO_max, "b")
+        if vary_WC in ["m_min", "m_sum"]:
+            NO_label = "NO"
+            IO_label =  "IO"
+        else:
+            NO_label = None
+            IO_label =  None
+            
+        if vary_WC != "m_sum":
+            xNO = M
+            xIO = M
+        else:
+            xNO = MNOsum
+            xIO = MIOsum
+        plt.plot(xNO,NO_min, colors[0], linewidth = 1)
+        plt.plot(xNO,NO_max, colors[0], linewidth = 1)
 
-        plt.plot(M,IO_min, "r")
-        plt.plot(M,IO_max, "r")
+        plt.plot(xIO,IO_min, colors[1], linewidth = 1)
+        plt.plot(xIO,IO_max, colors[1], linewidth = 1)
 
-        plt.fill_between(M, IO_max, IO_min, color="r", alpha=0.5, label="IO")
-        plt.fill_between(M, NO_max, NO_min, color="b", alpha=0.5, label="NO")
+        plt.fill_between(xIO, IO_max, IO_min, linewidth = 1, 
+                         facecolor = list(mplt.colors.to_rgb(colors[1]))+[alpha_plot],
+                         edgecolor = list(mplt.colors.to_rgb(colors[1]))+[1],
+                         label="IO")
+        plt.fill_between(xNO, NO_max, NO_min, linewidth = 1, 
+                         facecolor = list(mplt.colors.to_rgb(colors[0]))+[alpha_plot],
+                         edgecolor = list(mplt.colors.to_rgb(colors[0]))+[1],
+                         label="NO")
         
         
         if compare_to_mass:
             
-            plt.plot(M,NO_min_mbb, "grey")
-            plt.plot(M,NO_max_mbb, "grey")
+            plt.plot(xNO,NO_min_mbb, "k", linewidth = 1)
+            plt.plot(xNO,NO_max_mbb, "k", linewidth = 1)
 
-            plt.plot(M,IO_min_mbb, "grey")
-            plt.plot(M,IO_max_mbb, "grey")
+            plt.plot(xIO,IO_min_mbb, "k", linewidth = 1)
+            plt.plot(xIO,IO_max_mbb, "k", linewidth = 1)
 
-            plt.fill_between(M, IO_max_mbb, IO_min_mbb, color="k", alpha=0.1, label=r"$m_{\beta\beta}$")
-            plt.fill_between(M, NO_max_mbb, NO_min_mbb, color="k", alpha=0.1)
+            plt.fill_between(xIO, IO_max_mbb, IO_min_mbb, 
+                             linewidth = 1, 
+                             facecolor = [0,0,0, alpha_mass],
+                             edgecolor = [0,0,0,1],
+                             label=r"$m_{\beta\beta}$")
+            plt.fill_between(xNO, NO_max_mbb, NO_min_mbb, 
+                             linewidth = 1, 
+                             facecolor = [0,0,0, alpha_mass],
+                             edgecolor = [0,0,0,1])
 
         plt.yscale("log")
         plt.xscale("log")
         plt.ylim(y_min,y_max)
         plt.xlim(x_min,x_max)
-        if vary_WC == "m_min":
+        if vary_WC in ["m_min", "m_sum"]:
             plt.legend(fontsize=20)
         if normalize_to_mass:
             plt.ylabel(r"$\frac{t_{1/2}}{t_{1/2, m_{\beta\beta}}}$", fontsize=20)
@@ -3129,6 +3385,8 @@ class LEFT(object):
             plt.ylabel(r"$t_{1/2}$ [yr]", fontsize=20)
         if vary_WC == "m_min":
             plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
+        elif vary_WC == "m_sum":
+            plt.xlabel(r"$\sum_i m_{i}$ [eV]", fontsize=20)
         else:
             if vary_WC == "m_bb":
                 plt.xlabel(r"$|m_{\beta\beta}|$ [eV]", fontsize=20)
@@ -3136,21 +3394,56 @@ class LEFT(object):
                 plt.xlabel(r"$|C_{"+vary_WC[:-3]+"}^{"+vary_WC[-3:]+"}|$", fontsize=20)
         plt.tight_layout()
         if cosmo:
-            def m_sum(m_min):
-                m21 = 7.53e-5
-                m32 = 2.453e-3
-                msum = m_min + np.sqrt(m_min**2+m21) + np.sqrt(m_min**2 + m21 + m32)
-                return(msum-m_cosmo)
-            cosmo_limit = scipy.optimize.root(m_sum, x0 = 0.05).x[0]
+            if vary_WC != "m_sum":
+                def m_sum(m_min):
+                    m21 = 7.53e-5
+                    m32 = 2.453e-3
+                    msum = m_min + np.sqrt(m_min**2+m21) + np.sqrt(m_min**2 + m21 + m32)
+                    return(msum-m_cosmo)
+                cosmo_limit = scipy.optimize.root(m_sum, x0 = 0.05).x[0]
+            else:
+                cosmo_limit = m_cosmo
             #print(cosmo_limit)
-            #m_cosmo
-            plt.fill_betweenx([y_min, y_max], [1], [cosmo_limit], alpha=0.2, color="k")
-        #if experiments != None:
-        #    for experiment in experiments:
-        #        plt.axhline(experiments[experiment], linewidth = 1)
-        #        plt.text(x = 1e-3, y = experiments[experiment], s = experiment)
+            m_cosmo
+            plt.fill_betweenx([y_min,y_max], [x_max], [cosmo_limit], alpha=alpha_cosmo, color="k")
+        if experiments != None:
+            for experiment in experiments:
+                y_data    = experiments[experiment][0]
+                try:
+                    color     = experiments[experiment][1]
+                except:
+                    color = "grey"
+                try:
+                    plot_type = experiments[experiment][2]
+                except:
+                    plot_type = "line"
+                try:
+                    alpha     = experiments[experiment][3]
+                except:
+                    if plot_type == "line":
+                        alpha = 1
+                    else:
+                        alpha = 0.25
+                if plot_type == "line":
+                    plt.axhline(y_data, linewidth = 1, color = color, alpha = alpha)
+                    plt.text(x = x_min, y = y_data, s = experiment, fontsize = 15)
+                elif plot_type == "fill":
+                    plt.fill_between(M, y_min, y_data, color = color, alpha = alpha)
+                    plt.text(x = x_min, y = y_data, s = experiment, fontsize = 15)
+                else:
+                    print("plot_type", plot_type, "unknown. Doing a line Plot")
+                    plt.axhline(y_data, linewidth = 1, color = color, alpha = alpha)
+                    plt.text(x = x_min, y = y_data, s = experiment, fontsize = 15)
         if savefig:
-            plt.savefig("t_half.png", dpi=300)
+            plt.savefig(file, dpi=300)
+        if return_points:
+            points = {"xNO"   : xNO, 
+                      "xIO"   : xIO, 
+                      "y1NO"  : NO_min, 
+                      "y2NO"  : NO_max, 
+                      "y1IO"  : IO_min, 
+                      "y2IO"  : IO_max}
+            return(fig, points)
         return(fig)
     
     def plot_limits(self, experiments, method = "IBM2", plot_groups=True, savefig=False, plottype="scales"):
@@ -3237,11 +3530,14 @@ class LEFT(object):
                 
         return(fig.get_figure())
     
-    def plot_m_eff_scatter(self, vary_WC = "m_min", vary_phases = True, isotope="76Ge", 
-                           vary_LECs=False, n_dots=10000, ordering = "both", 
-                           save=False, file="m_eff_scatter.png", alpha_plot=1, 
-                           x_min=1e-4, x_max = 1, y_min = None, y_max = None, 
-                           cosmo = False, m_cosmo = 0.15, compare_to_mass = False, normalize_to_mass = False):
+    def plot_m_eff_scatter(self, vary_WC = "m_min", isotope="76Ge", 
+                           vary_phases = True, vary_LECs=False, 
+                           n_dots=10000, ordering = "both", 
+                           alpha_plot=1, x_min=1e-4, x_max = 1, 
+                           y_min = None, y_max = None, 
+                           cosmo = False, m_cosmo = 0.15, 
+                           compare_to_mass = False, normalize_to_mass = False, 
+                           savefig=False, file="m_eff_scatter.png"):
         #model = EFT.LEFT(WC)
         #m_N = 0.93
         LECs = { 'Tprime': 1,
@@ -3270,7 +3566,7 @@ class LEFT(object):
                }
         
         if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
-            print("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
             
         if compare_to_mass:
@@ -3448,13 +3744,13 @@ class LEFT(object):
                            Line2D([0], [0], marker='o', color='w', label='IO',
                                   markerfacecolor='r', markersize=10)]
             plt.legend(handles = legend_elements, fontsize=20)
-        if save:
+        if savefig:
             plt.savefig(file)
         return(fig)
         #return(forbidden_LECsNO, forbidden_LECsNOm, forbidden_LECsIO, forbidden_LECsIOm)
         
     def plot_t_half_scatter(self, vary_WC = "m_min", vary_phases = True, vary_LECs=False, experiments=None, n_dots=10000, 
-                            save = False, file="t_half_scatter.png", alpha_plot=1, isotope = "76Ge", ordering = None, 
+                            savefig = False, file="t_half_scatter.png", alpha_plot=1, isotope = "76Ge", ordering = None, 
                             x_min=1e-4, x_max = 1, y_min = None, y_max = None, cosmo=True, m_cosmo  = 0.15, 
                             compare_to_mass = False, normalize_to_mass = False):
         #model = EFT.LEFT(WC)
@@ -3462,7 +3758,7 @@ class LEFT(object):
         #element_name = "76Ge"
         n_points = n_dots
         if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
-            print("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
         LECs = { 'Tprime': 1,
                  'Tpipi': 1,
@@ -3666,17 +3962,17 @@ class LEFT(object):
                 plt.axhline(experiments[experiment], label )
                 plt.text(x = 1e-3, y = experiments[experiment], s = experiment)
         #return(forbidden_LECsNO, forbidden_LECsNOm, forbidden_LECsIO, forbidden_LECsIOm)
-        if save == True:
+        if savefig == True:
             plt.savefig(file)
         return(fig)
     def plot_t_half_inv_scatter(self, vary_WC = "m_min", vary_phases = True, vary_LECs=False, experiments=None, n_dots=10000, 
-                                save = False, file="t_half_scatter.png", alpha_plot=1, isotope = "76Ge", 
+                                savefig = False, file="t_half_scatter.png", alpha_plot=1, isotope = "76Ge", 
                                 x_min=1e-4, x_max = 1, y_min = None, y_max = None, cosmo=True, m_cosmo = 0.15, 
                                 compare_to_mass = False, normalize_to_mass = False, ordering = None):
         #m_N = 0.93
         n_points = n_dots
         if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
-            print("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
         #element_name = "76Ge"
         LECs = { 'Tprime': 1,
@@ -3885,11 +4181,11 @@ class LEFT(object):
                 plt.axhline(experiments[experiment], label )
                 plt.text(x = 1e-3, y = experiments[experiment], s = experiment)
         #return(forbidden_LECsNO, forbidden_LECsNOm, forbidden_LECsIO, forbidden_LECsIOm)
-        if save == True:
+        if savefig == True:
             plt.savefig(file)
         return(fig)
     
-    def generate_formula(self, isotope, WCs = None, method = None, decimal = 2, output = "latex"):
+    def generate_formula(self, isotope, WC = None, method = None, decimal = 2, output = "latex"):
         if method == None:
             method = self.method
             pass
@@ -3905,15 +4201,15 @@ class LEFT(object):
             method = self.method
             pass
             
-        if WCs == None:
-            WCs = []
+        if WC == None:
+            WC = []
             for WC in self.WC:
                 if self.WC[WC] != 0:
-                    WCs.append(WC)
-        return(f.generate_formula(WCs, isotope, output, method = method, decimal = decimal))
+                    WC.append(WC)
+        return(f.generate_formula(WC, isotope, output, method = method, decimal = decimal))
     
     
-    def generate_matrix(self, isotope, WCs = None, method = None):
+    def generate_matrix(self, isotope, WC = None, method = None):
         if method == None:
             method = self.method
             pass
@@ -3928,12 +4224,12 @@ class LEFT(object):
         else:
             method = self.method
             pass
-        if WCs == None:
-            WCs = []
+        if WC == None:
+            WC = []
             for WC in self.WC:
                 if self.WC[WC] != 0:
-                    WCs.append(WC)
-        return(f.generate_matrix(WCs, isotope, method = method))
+                    WC.append(WC)
+        return(f.generate_matrix(WC, isotope, method = method))
 
 '''
 #####################################################################################################
@@ -4464,7 +4760,7 @@ class SMEFT(object):
         model = LEFT(LEFT_WCs, unknown_LECs = unknown_LECs, method = method)
         return(model.half_lives())
     
-    def spectra(self, Ebar, WC = None, method = None, printing = True):#, unknown_LECs = None
+    def spectrum(self, Ebar, WC = None, method = None, printing = True):#, unknown_LECs = None
         if WC == None:
             WC = self.WC.copy()
         #if unknown_LECs == None:
@@ -4486,7 +4782,7 @@ class SMEFT(object):
         if printing:
             print("... matching onto LEFT ...")
         model = LEFT(LEFT_WCs, unknown_LECs = unknown_LECs, method = method)
-        return(model.spectra(Ebar))
+        return(model.spectrum(Ebar))
     
     def angular_corr(self, Ebar, WC = None, method = None, printing = True):#, unknown_LECs = None
         if WC == None:
