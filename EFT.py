@@ -1339,7 +1339,7 @@ class LEFT(object):
                           - 2 * (element.g_01(E, Delta_M - E) - g_04_rescaling * element.g_04(E, Delta_M - E))*(np.conj(amp["nu"])*amp["R"]).real
                           + 4 *  element.g_02(E, Delta_M - E)* np.absolute(amp["E"])**2
                           + 2 *  g_04_rescaling * element.g_04(E, Delta_M - E)*(np.absolute(amp["me"])**2 + (np.conj(amp["me"])*(amp["nu"]+amp["R"])).real)
-                          - 2 *  element.g_03(E, Delta_M - E)*((amp["nu"]+amp["R"])*np.conj(amp["E"]) + 2*amp["me"]*np.conj(amp["E"]))
+                          - 2 *  element.g_03(E, Delta_M - E)*((amp["nu"]+amp["R"])*np.conj(amp["E"]) + 2*amp["me"]*np.conj(amp["E"])).real
                           + g_09_rescaling * element.g_09(E, Delta_M - E) * np.absolute(amp["M"])**2
                           + g_06_rescaling * element.g_06(E, Delta_M - E) * ((amp["nu"]-amp["R"])*np.conj(amp["M"])).real)* p(E)*p(Delta_M-E)* E * (Delta_M - E)
         return(result)
@@ -1372,7 +1372,6 @@ class LEFT(object):
         #if not initialized calculate amplitudes
         #if amp == None:
         amp = self.amplitudes(isotope, WC = WC, method = method)[0]
-            
         #electron mass in MeV
         #m_e = pc["electron mass energy equivalent in MeV"][0]
         
@@ -1388,21 +1387,22 @@ class LEFT(object):
         g_04_rescaling = 9/2
 
         hs = (element.h_01(E, Delta_M - E) * (np.absolute(amp["nu"])**2 + np.absolute(amp["R"])**2)
-                          - 2 * (element.h_01(E, Delta_M - E) - g_04_rescaling * element.h_04(E, Delta_M - E))*(np.conj(amp["nu"])*amp["R"]).real
-                          + 4 *  element.h_02(E, Delta_M - E)* np.absolute(amp["E"])**2
-                          + 2 *  g_04_rescaling * element.h_04(E, Delta_M - E)*(np.absolute(amp["me"])**2 + (np.conj(amp["me"])*(amp["nu"]+amp["R"])).real)
-                          - 2 *  element.h_03(E, Delta_M - E)*((amp["nu"]+amp["R"])*np.conj(amp["E"]) + 2*amp["me"]*np.conj(amp["E"]))
-                          + g_09_rescaling * element.h_09(E, Delta_M - E) * np.absolute(amp["M"])**2
-                          + g_06_rescaling * element.h_06(E, Delta_M - E) * ((amp["nu"]-amp["R"])*np.conj(amp["M"])).real)
+              - 2 * (element.h_01(E, Delta_M - E) - g_04_rescaling * element.h_04(E, Delta_M - E))*(np.conj(amp["nu"])*amp["R"]).real
+              + 4 *  element.h_02(E, Delta_M - E)* np.absolute(amp["E"])**2
+              + 2 *  g_04_rescaling * element.h_04(E, Delta_M - E)*(np.absolute(amp["me"])**2 + (np.conj(amp["me"])*(amp["nu"]+amp["R"])).real)
+              - 2 *  element.h_03(E, Delta_M - E)*((amp["nu"]+amp["R"])*np.conj(amp["E"]) + 2*amp["me"]*np.conj(amp["E"])).real
+              + g_09_rescaling * element.h_09(E, Delta_M - E) * np.absolute(amp["M"])**2
+              + g_06_rescaling * element.h_06(E, Delta_M - E) * ((amp["nu"]-amp["R"])*np.conj(amp["M"])).real)
 
+        
+        
         gs = (element.g_01(E, Delta_M - E) * (np.absolute(amp["nu"])**2 + np.absolute(amp["R"])**2)
-                          - 2 * (element.g_01(E, Delta_M - E) - g_04_rescaling * element.g_04(E, Delta_M - E))*(np.conj(amp["nu"])*amp["R"]).real
-                          + 4 *  element.g_02(E, Delta_M - E)* np.absolute(amp["E"])**2
-                          + 2 *  g_04_rescaling * element.g_04(E, Delta_M - E)*(np.absolute(amp["me"])**2 + (np.conj(amp["me"])*(amp["nu"]+amp["R"])).real)
-                          - 2 *  element.g_03(E, Delta_M - E)*((amp["nu"]+amp["R"])*np.conj(amp["E"]) + 2*amp["me"]*np.conj(amp["E"]))
-                          + g_09_rescaling * element.g_09(E, Delta_M - E) * np.absolute(amp["M"])**2
-                          + g_06_rescaling * element.g_06(E, Delta_M - E) * ((amp["nu"]-amp["R"])*np.conj(amp["M"])).real)
-
+              - 2 * (element.g_01(E, Delta_M - E) - g_04_rescaling * element.g_04(E, Delta_M - E)) * (np.conj(amp["nu"])*amp["R"]).real
+              + 4 *  element.g_02(E, Delta_M - E)* np.absolute(amp["E"])**2
+              + 2 *  g_04_rescaling * element.g_04(E, Delta_M - E)*(np.absolute(amp["me"])**2 + (np.conj(amp["me"])*(amp["nu"]+amp["R"])).real)
+              - 2 *  element.g_03(E, Delta_M - E)*((amp["nu"]+amp["R"])*np.conj(amp["E"]) + 2*amp["me"]*np.conj(amp["E"])).real
+              + g_09_rescaling * element.g_09(E, Delta_M - E) * np.absolute(amp["M"])**2
+              + g_06_rescaling * element.g_06(E, Delta_M - E) * ((amp["nu"]-amp["R"])*np.conj(amp["M"])).real)
         return (hs/gs)
     
     
@@ -4243,6 +4243,12 @@ class LEFT(object):
 
 class SMEFT(object):
     def __init__(self, WC, scale, name = None, method = "IBM2", unknown_LECs = False):
+        self.m_N = 0.93
+        self.m_e = pc["electron mass energy equivalent in MeV"][0] * 1e-3
+        self.m_e_MEV = pc["electron mass energy equivalent in MeV"][0]
+        self.vev = 246
+        
+        
         if scale <=80:
             raise ValueError("scale must be greater than 80")
         self.method = method                       #NME method
@@ -4296,6 +4302,42 @@ class SMEFT(object):
                           "LLH4D23(9)"   : 0,
                           "LLH4D24(9)"   : 0}
         
+        ########################################################
+        #
+        #
+        #                     Define LECs
+        #
+        #
+        ########################################################
+        if unknown_LECs == True:
+            self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
+                       "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
+                       # all the below are expected to be order 1 in absolute magnitude
+                       "Tprime":1, "Tpipi":1, "1piN":1, "6piN":1, "7piN":1, "8piN":1, "9piN":1, "VLpiN":1, "TpiN":1, 
+                       "1NN":1, "6NN":1, "7NN":1, "VLNN":1, "TNN": 1, "VLE":1, "VLme":1, "VRE":1, "VRme":1, 
+                       # all the below are expected to be order (4pi)**2 in absolute magnitude
+                       "2NN":(4*np.pi)**2, "3NN":(4*np.pi)**2, "4NN":(4*np.pi)**2, "5NN":(4*np.pi)**2, 
+                       # expected to be 1/F_pipi**2 pion decay constant
+                       "nuNN": -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
+                      }
+            
+            self.LEC["VpiN"] = self.LEC["6piN"] + self.LEC["8piN"]
+            self.LEC["tildeVpiN"] = self.LEC["7piN"] + self.LEC["9piN"]
+        
+        else:
+            self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
+                       "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
+                       # all the below are expected to be order 1 in absolute magnitude
+                       "Tprime":1, "Tpipi":0, "1piN":1, "6piN":0, "7piN":0, "8piN":0, "9piN":0, "VLpiN":0, "TpiN":0, 
+                       "1NN":1, "6NN":1, "7NN":1, "VLNN":0, "TNN": 0, "VLE":0, "VLme":0, "VRE":0, "VRme":0, 
+                       # all the below are expected to be order (4pi)**2 in absolute magnitude
+                       "2NN":0, "3NN":0, "4NN":0, "5NN":0, 
+                       # expected to be 1/F_pipi**2 pion decay constant
+                       "nuNN": -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
+                      }
+            self.LEC["VpiN"] = 1#LEC["6piN"] + LEC["8piN"]
+            self.LEC["tildeVpiN"] = 1#LEC["7piN"] + LEC["9piN"]
+        
         for operator in WC:
             #store SMEFT operators
             #need to be conjugated to have d -> u transitions
@@ -4303,6 +4345,19 @@ class SMEFT(object):
 
         self.WC_input = self.SMEFT_WCs.copy()
         self.WC = self.WC_input.copy()
+        
+        
+        ########################################################
+        #
+        #
+        #                     Define NMEs
+        #
+        #
+        ########################################################
+        self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+        
+        
+        
         #'''
         #self.WC = self.run() #generates SMEFT WCs at electroweak scale
         #''''
@@ -4728,84 +4783,103 @@ class SMEFT(object):
             WC = self.WC.copy()
         if method == None:
             method = self.method
+            NMEs = self.NMEs
+        elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
+            newNMEs, newNMEpanda, newNMEnames = Load_NMEs(method)
+            NMEs = newNMEs
         elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
+            NMEs = self.NMEs
         else:
-            pass
+            method = self.method
+            NMEs = self.NMEs
         LEFT_WCs = self.LEFT_matching(WC)
         model = LEFT(LEFT_WCs, method = method)
+        model.LEC = self.LEC.copy()
+        model.NMEs = NMEs.copy()
         return(model.t_half(isotope))
         
     def half_lives(self, WC = None, method = None):#, unknown_LECs = None):#, printing = True):
+        #returns a pandas.DataFrame with all half-lives of the available isotopes for the considered NME method
+        #if unknown_LECs != None and unknown_LECs != self.unknown_LECs:
+        #    self.set_LECs(unknown_LECs)
         if WC == None:
             WC = self.WC.copy()
-        if unknown_LECs == None:
-            unknown_LECs = self.unknown_LECs
         if method == None:
             method = self.method
-        #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            #print("Changing method to",method)
-        #    self.method = method
-            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+            NMEs = self.NMEs
+        elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
+            newNMEs, newNMEpanda, newNMEnames = Load_NMEs(method)
+            NMEs = newNMEs
         elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
+            NMEs = self.NMEs
         else:
-            pass
+            method = self.method
+            NMEs = self.NMEs
             
         #if printing:
         #    print("... solving RGEs ...")
         LEFT_WCs = self.LEFT_matching(WC)
         #if printing:
         #    print("... matching onto LEFT ...")
-        model = LEFT(LEFT_WCs, unknown_LECs = unknown_LECs, method = method)
+        model = LEFT(LEFT_WCs, method = method)
+        model.LEC = self.LEC.copy()
+        model.NMEs = NMEs.copy()
         return(model.half_lives())
     
-    def spectrum(self, Ebar, WC = None, method = None, printing = True):#, unknown_LECs = None
+    def spectrum(self, Ebar, WC = None, method = None):#, unknown_LECs = None
         if WC == None:
             WC = self.WC.copy()
-        #if unknown_LECs == None:
-        #    unknown_LECs = self.unknown_LECs
         if method == None:
             method = self.method
-        #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            #print("Changing method to",method)
-        #    self.method = method
-            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+            NMEs = self.NMEs
+        elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
+            newNMEs, newNMEpanda, newNMEnames = Load_NMEs(method)
+            NMEs = newNMEs
         elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
+            NMEs = self.NMEs
         else:
-            pass
+            method = self.method
+            NMEs = self.NMEs
             
         #if printing:
         #    print("... solving RGEs ...")
         LEFT_WCs = self.LEFT_matching(WC)
-        if printing:
-            print("... matching onto LEFT ...")
-        model = LEFT(LEFT_WCs, unknown_LECs = unknown_LECs, method = method)
+        #f printing:
+        #print("... matching onto LEFT ...")
+        model = LEFT(LEFT_WCs, method = method)
+        model.LEC = self.LEC.copy()
+        model.NMEs = NMEs.copy()
         return(model.spectrum(Ebar))
     
-    def angular_corr(self, Ebar, WC = None, method = None, printing = True):#, unknown_LECs = None
+    def angular_corr(self, Ebar, WC = None, method = None):#, unknown_LECs = None
         if WC == None:
             WC = self.WC.copy()
-        #if unknown_LECs == None:
-        #    unknown_LECs = self.unknown_LECs
         if method == None:
             method = self.method
-        #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            #print("Changing method to",method)
-        #    self.method = method
-            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+            NMEs = self.NMEs
+        elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
+            newNMEs, newNMEpanda, newNMEnames = Load_NMEs(method)
+            NMEs = newNMEs
         elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
+            NMEs = self.NMEs
         else:
-            pass
+            method = self.method
+            NMEs = self.NMEs
             
-        #if printing:
-        #    print("... solving RGEs ...")
         LEFT_WCs = self.LEFT_matching(WC)
-        if printing:
-            print("... matching onto LEFT ...")
-        model = LEFT(LEFT_WCs, unknown_LECs = unknown_LECs, method = method)
+        #if printing:
+        #print("... matching onto LEFT ...")
+        model = LEFT(LEFT_WCs, method = method)
+        model.LEC = self.LEC.copy()
+        model.NMEs = NMEs.copy()
         return(model.angular_corr(Ebar))
 
     def get_limits2(self, hl, unknown_LECs = False, method = None, isotope = "76Ge", onlygroups = False):
@@ -4816,7 +4890,7 @@ class SMEFT(object):
         #    self.method = method
             #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
         elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
         else:
             pass
         vev = 246
