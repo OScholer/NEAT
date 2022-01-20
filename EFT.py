@@ -1449,7 +1449,7 @@ class LEFT(object):
         return(hl)
     
     
-    def ratios(self, savefig = False, plot = False, reference_isotope = "76Ge", 
+    def ratios(self, savefig = False, plot = False, reference_isotope = "76Ge", file = "ratios.png",
                normalized = True, method=None, vary = False, n_points = 100, addgrid = True):
     #returns the half-live ratios compared to the standard mass mechanism based on the chosen reference isotope
     #can optionally also generate a plot of the ratios and save them as "ratios_"+self.name+".png"
@@ -4774,113 +4774,82 @@ class SMEFT(object):
         #LEFT_WCs["5L(9)"] = only contributions from running in LEFT
         
         return(LEFT_WCs)
+    
+    def generate_LEFT_model(self, WC = None, method = None, LEC = None):
+        if WC == None:
+            WC = self.WC.copy()
+        if method == None:
+            method = self.method
+            NMEs = self.NMEs
+        elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
+            newNMEs, newNMEpanda, newNMEnames = Load_NMEs(method)
+            NMEs = newNMEs
+        elif method not in ["IBM2", "QRPA", "SM"]:
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
+            NMEs = self.NMEs
+        else:
+            method = self.method
+            NMEs = self.NMEs
+            
+        if LEC == None:
+            LEC = self.LEC.copy()
+        LEFT_WCs = self.LEFT_matching(WC)
+        model = LEFT(LEFT_WCs, method = method)
+        model.LEC = LEC
+        model.NMEs = NMEs.copy()
+        return(model)
 
     def set_LECs(self, unknown_LECs):
         self.unknown_LECs = unknown_LECs
         
     def t_half(self, isotope, WC = None, method = None):
-        if WC == None:
-            WC = self.WC.copy()
-        if method == None:
-            method = self.method
-            NMEs = self.NMEs
-        elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            newNMEs, newNMEpanda, newNMEnames = Load_NMEs(method)
-            NMEs = newNMEs
-        elif method not in ["IBM2", "QRPA", "SM"]:
-            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
-            method = self.method
-            NMEs = self.NMEs
-        else:
-            method = self.method
-            NMEs = self.NMEs
-        LEFT_WCs = self.LEFT_matching(WC)
-        model = LEFT(LEFT_WCs, method = method)
-        model.LEC = self.LEC.copy()
-        model.NMEs = NMEs.copy()
+        
+        model = self.generate_LEFT_model(WC, method, LEC = None)
+        
         return(model.t_half(isotope))
         
-    def half_lives(self, WC = None, method = None):#, unknown_LECs = None):#, printing = True):
-        #returns a pandas.DataFrame with all half-lives of the available isotopes for the considered NME method
-        #if unknown_LECs != None and unknown_LECs != self.unknown_LECs:
-        #    self.set_LECs(unknown_LECs)
-        if WC == None:
-            WC = self.WC.copy()
-        if method == None:
-            method = self.method
-            NMEs = self.NMEs
-        elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            newNMEs, newNMEpanda, newNMEnames = Load_NMEs(method)
-            NMEs = newNMEs
-        elif method not in ["IBM2", "QRPA", "SM"]:
-            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
-            method = self.method
-            NMEs = self.NMEs
-        else:
-            method = self.method
-            NMEs = self.NMEs
-            
-        #if printing:
-        #    print("... solving RGEs ...")
-        LEFT_WCs = self.LEFT_matching(WC)
-        #if printing:
-        #    print("... matching onto LEFT ...")
-        model = LEFT(LEFT_WCs, method = method)
-        model.LEC = self.LEC.copy()
-        model.NMEs = NMEs.copy()
+    def half_lives(self, WC = None, method = None):
+        
+        model = self.generate_LEFT_model(WC, method, LEC = None)
+        
         return(model.half_lives())
     
     def spectrum(self, Ebar, WC = None, method = None):#, unknown_LECs = None
-        if WC == None:
-            WC = self.WC.copy()
-        if method == None:
-            method = self.method
-            NMEs = self.NMEs
-        elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            newNMEs, newNMEpanda, newNMEnames = Load_NMEs(method)
-            NMEs = newNMEs
-        elif method not in ["IBM2", "QRPA", "SM"]:
-            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
-            method = self.method
-            NMEs = self.NMEs
-        else:
-            method = self.method
-            NMEs = self.NMEs
-            
-        #if printing:
-        #    print("... solving RGEs ...")
-        LEFT_WCs = self.LEFT_matching(WC)
-        #f printing:
-        #print("... matching onto LEFT ...")
-        model = LEFT(LEFT_WCs, method = method)
-        model.LEC = self.LEC.copy()
-        model.NMEs = NMEs.copy()
+        
+        model = self.generate_LEFT_model(WC, method, LEC = None)
+        
         return(model.spectrum(Ebar))
     
     def angular_corr(self, Ebar, WC = None, method = None):#, unknown_LECs = None
-        if WC == None:
-            WC = self.WC.copy()
-        if method == None:
-            method = self.method
-            NMEs = self.NMEs
-        elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            newNMEs, newNMEpanda, newNMEnames = Load_NMEs(method)
-            NMEs = newNMEs
-        elif method not in ["IBM2", "QRPA", "SM"]:
-            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
-            method = self.method
-            NMEs = self.NMEs
-        else:
-            method = self.method
-            NMEs = self.NMEs
-            
-        LEFT_WCs = self.LEFT_matching(WC)
-        #if printing:
-        #print("... matching onto LEFT ...")
-        model = LEFT(LEFT_WCs, method = method)
-        model.LEC = self.LEC.copy()
-        model.NMEs = NMEs.copy()
+        
+        model = self.generate_LEFT_model(WC, method, LEC = None)
+        
         return(model.angular_corr(Ebar))
+    
+    def plot_spec(self, isotope = "76Ge", WC = None, method = None, 
+                  print_title = False, addgrid = True, show_mbb = True, 
+                  savefig = False, file = "spec.png"):
+        
+        model = self.generate_LEFT_model(WC, method, LEC = None)
+        
+        return(model.plot_spec(isotope = isotope, 
+                               print_title = print_title, 
+                               addgrid = addgrid, 
+                               show_mbb = show_mbb, 
+                               savefig = savefig, file = file))
+    
+    def plot_corr(self, isotope = "76Ge", WC = None, method = None, 
+                  print_title = False, addgrid = True, show_mbb = True, 
+                  savefig = False, file = "angular_corr.png"):
+        
+        model = self.generate_LEFT_model(WC, method, LEC = None)
+        
+        return(model.plot_corr(isotope = isotope, 
+                               print_title = print_title, 
+                               addgrid = addgrid, 
+                               show_mbb = show_mbb, 
+                               savefig = savefig, file = file))
 
     def get_limits2(self, hl, unknown_LECs = False, method = None, isotope = "76Ge", onlygroups = False):
         if method == None:
@@ -4979,22 +4948,14 @@ class SMEFT(object):
         
         return(result, scales)#, scale)
     
-    def ratios(self, save = False, plot = False, reference_isotope = "76Ge", normalized = True, method=None, vary = False, n_points = 100, addgrid = True):
-        if method == None:
-            method = self.method
-        #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
-            #print("Changing method to",method)
-        #    self.method = method
-            #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
-        elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
-        else:
-            pass
-        LEFT_model = LEFT(self.LEFT_matching(), method = method)
-        return(LEFT_model.ratios(save = save, plot = plot, 
-                                 reference_isotope = reference_isotope, 
-                                 normalized = normalized, method=method, 
-                                 vary = vary, n_points = n_points))
+    def ratios(self, WC = None, savefig = False, plot = False, reference_isotope = "76Ge", normalized = True, method=None, vary = False, n_points = 100, addgrid = True, file = "ratios.png"):
+        
+        model = self.generate_LEFT_model(WC, method, LEC = None)
+        
+        return(model.ratios(savefig = savefig, plot = plot, file = file,
+                            reference_isotope = reference_isotope, 
+                            normalized = normalized, method=method, 
+                            vary = vary, n_points = n_points))
 
 
 
