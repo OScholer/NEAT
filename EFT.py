@@ -1449,32 +1449,39 @@ class LEFT(object):
         return(hl)
     
     
-    def ratios(self, savefig = False, plot = False, reference_isotope = "76Ge", file = "ratios.png",
-               normalized = True, method=None, vary = False, n_points = 100, addgrid = True):
+    def ratios(self, reference_isotope = "76Ge", normalized = True, 
+               WC = None, method=None, vary = False, n_points = 100):
     #returns the half-live ratios compared to the standard mass mechanism based on the chosen reference isotope
     #can optionally also generate a plot of the ratios and save them as "ratios_"+self.name+".png"
-    
+        if WC == None:
+            WC = self.WC.copy()
         
         #set the method and import NMEs if necessary
         if method == None:
+            method = self.method
+            NMEs = self.NMEs.copy()
             pass
         elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
             print("Changing method to",method)
-            self.method = method
-            self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+            method = method
+            newNMEs, new.NMEpanda, newNMEnames = Load_NMEs(method)
+            NMEs = newNMEs.copy()
         elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
+            NMEs = self.NMEs.copy()
         else:
+            method = self.method
+            NMEs = self.NMEs.copy()
             pass
             
-        method = self.method
+        
 
         #generate WC dict for mass mechanism
         WC_mbb = self.WC.copy()
         for operator in WC_mbb:
             WC_mbb[operator] = 0
         WC_mbb["m_bb"] = 1e-9#m_bb * 1e-9
-        NMEs = self.NMEs.copy()
 
         #store ratios in a pd.DataFrame
         self.ratio_values = pd.DataFrame()
@@ -1488,32 +1495,17 @@ class LEFT(object):
         self.ratio_values.set_index("Model", inplace = True)
         
         if vary:
-            self.ratio_values_varried = {}
+            self.ratio_values_varied = {}
             for isotope in NMEs.keys():
-                self.ratio_values_varried[isotope] = []
-
-        #generate figure
-        if plot:
-            fig = plt.figure(figsize=(6.4*1.85, 4.8*2))
-
-            plt.xlabel(r"$\frac{R^{\mathcal{O}_i}-R^{m_\nu}}{R^{m_\nu}}$", fontsize=30)#, x = 0.45,y=1.05)
+                self.ratio_values_varied[isotope] = []
 
         #generate a list to store labels in, 1st label has to be empty. It corresponds to the axvline
         labels = [""]
 
-        #iterate over all elements
+        #iterate over all isotopes
         for isotope in NMEs.keys():#["76Ge", "82Se" , "130Te", "136Xe"]:
 
             ratio_list = []
-
-            #match isotope to element class
-            element = self.elements[isotope]
-
-            #get A from the element_name for the plot labels
-            if isotope[0] != "1" and isotope[0] != "2":
-                isotope_plot = isotope[0:2]
-            else:
-                isotope_plot = isotope[0:3]
 
             #set the color
             c = "b"
@@ -1521,18 +1513,18 @@ class LEFT(object):
             #set the marker
             m = "x"
 
-            #Calculate Rates for Current element and the reference element 76Ge
+            #Calculate Rates for Current isotope and the reference isotope 76Ge
             #This could be done more efficiently by storing the GE amplitudes 
             #one loop earlier, but I was too lazy and including the amps in the
             #t_half function is cleaner.
 
             #Store half lives for light nu exchange model
-            t_half_m_bb = self.t_half(isotope, WC_mbb)
-            t_half_m_bb_Ge = self.t_half(reference_isotope, WC_mbb)
+            t_half_m_bb = self.t_half(isotope, WC_mbb, method = method)
+            t_half_m_bb_Ge = self.t_half(reference_isotope, WC_mbb, method = method)
 
             #calculate half lives for current model
-            t_half_model = self.t_half(isotope, self.WC)
-            t_half_model_Ge = self.t_half(reference_isotope, self.WC)
+            t_half_model = self.t_half(isotope, WC, method = method)
+            t_half_model_Ge = self.t_half(reference_isotope, WC, method = method)
 
             if normalized:
                 #take ratio normalized to the standard mass mechanism
@@ -1541,8 +1533,6 @@ class LEFT(object):
                 ratio = t_half_model/t_half_model_Ge
 
 
-            if plot:
-                plt.scatter(np.log10(ratio), isotope_plot, marker = m, color = c, s=150)
 
             self.ratio_values[isotope] = [ratio]
             
@@ -1573,8 +1563,8 @@ class LEFT(object):
                          'nuNN': -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
                        }
                 LEC_backup = self.LEC.copy()
-                n_points = 500
-                varried_ratios = pd.DataFrame()
+                
+                varied_ratios = pd.DataFrame()
                 for idx in range(n_points):
                     for LEC in LECs:
                         if LEC == "nuNN":
@@ -1605,34 +1595,68 @@ class LEFT(object):
                         ratio = t_half_model/t_half_model_Ge
                         
                     
-                    self.ratio_values_varried[isotope].append(ratio)
-                    if plot:
-                        plt.scatter(np.log10(ratio), isotope_plot, marker = ".", color = c, s=20, alpha = 0.25)
+                    self.ratio_values_varied[isotope].append(ratio)
                     
                 #restore standard LECs
                 self.LEC = LEC_backup.copy()
-        if plot:
-            #plt.legend([r"$m_{\beta\beta}$", self.name], loc="upper right", ncol=1, fontsize = 20)
-            if normalized:
-                plt.axvline(0, color="k", linewidth=1, label="")
-                plt.legend([r"$m_{\beta\beta}$", self.name], loc="upper right", ncol=1, fontsize = 20)
-                #plt.axvline(0, color="k", linewidth=1, label="")
-                plt.xlabel(r"$\log_{10}\frac{R^{\mathcal{O}_i}}{R^{m_{\beta\beta}}}$", fontsize=30)
-            else:
-                plt.legend([self.name], loc="upper right", ncol=1, fontsize = 20)
-                plt.xlabel(r"$\log_{10}R^{\mathcal{O}_i}$", fontsize=30)
-            plt.rc("ytick", labelsize = 20)
-            plt.rc("xtick", labelsize = 20)
-            plt.tight_layout()
-            if addgrid:
-                plt.grid(linestyle = "--")
-        if savefig and plot:
-            plt.savefig("ratios_"+self.name+".png", dpi=300)
-        if plot:
-            return(fig)
+                
         #if vary:
-        #    return(self.ratio_values, varried_ratios)
-        return(self.ratio_values)
+        #    return(self.ratio_values, varied_ratios)
+        if vary:
+            self.ratio_values_varied = pd.DataFrame(self.ratio_values_varied)
+            return(self.ratio_values, self.ratio_values_varied)
+        else:
+            return(self.ratio_values)
+        
+    def plot_ratios(self, reference_isotope = "76Ge", normalized = True, 
+                    WC = None, method=None, vary = False, n_points = 100, 
+                    color = "b", addgrid = True, savefig = False, file = "ratios.png"):
+        #set the color
+        c = color
+
+        #set the marker
+        m = "x"
+        if vary == True:
+            ratios, ratios_varied = self.ratios(reference_isotope = reference_isotope, 
+                                                normalized = normalized, WC = WC, method = method, 
+                                                vary = vary, n_points = n_points)
+        else:
+            ratios = self.ratios(reference_isotope = reference_isotope, 
+                                 normalized = normalized, WC = WC, method = method, 
+                                 vary = vary, n_points = n_points)
+        
+        fig = plt.figure(figsize=(6.4*1.85, 4.8*2))
+        
+        plt.xlabel(r"$\frac{R^{\mathcal{O}_i}-R^{m_\nu}}{R^{m_\nu}}$", fontsize=30)#, x = 0.45,y=1.05)
+        for isotope in ratios:
+            if isotope[0] != "1" and isotope[0] != "2":
+                isotope_plot = isotope[0:2]
+            else:
+                isotope_plot = isotope[0:3]
+                
+            plt.scatter(np.log10(ratios[isotope]), isotope_plot, 
+                marker = m, color = c, s=150)
+            if vary:
+                plt.scatter(np.log10(ratios_varied[isotope]), 
+                            np.repeat(isotope_plot, len(ratios_varied[isotope])), 
+                            marker = ".", color = c, s=20, alpha = 0.25)
+        
+        if normalized:
+            plt.axvline(0, color="k", linewidth=1, label="")
+            plt.legend([r"$m_{\beta\beta}$", self.name], loc="upper right", ncol=1, fontsize = 20)
+            #plt.axvline(0, color="k", linewidth=1, label="")
+            plt.xlabel(r"$\log_{10}\frac{R^{\mathcal{O}_i}}{R^{m_{\beta\beta}}}$", fontsize=30)
+        else:
+            plt.legend([self.name], loc="upper right", ncol=1, fontsize = 20)
+            plt.xlabel(r"$\log_{10}R^{\mathcal{O}_i}$", fontsize=30)
+        plt.rc("ytick", labelsize = 20)
+        plt.rc("xtick", labelsize = 20)
+        plt.tight_layout()
+        if addgrid:
+            plt.grid(linestyle = "--")
+        if savefig:
+            plt.savefig(file, dpi=300)
+        return(fig)
     
     
     def PSF_plot(self, isotope="76Ge", savegif=False, method=None):
@@ -4775,7 +4799,7 @@ class SMEFT(object):
         
         return(LEFT_WCs)
     
-    def generate_LEFT_model(self, WC = None, method = None, LEC = None):
+    def generate_LEFT_model(self, WC = None, method = None, LEC = None, name = None):
         if WC == None:
             WC = self.WC.copy()
         if method == None:
@@ -4792,10 +4816,12 @@ class SMEFT(object):
             method = self.method
             NMEs = self.NMEs
             
+        if name == None:
+            name = self.name
         if LEC == None:
             LEC = self.LEC.copy()
         LEFT_WCs = self.LEFT_matching(WC)
-        model = LEFT(LEFT_WCs, method = method)
+        model = LEFT(LEFT_WCs, method = method, name = name)
         model.LEC = LEC
         model.NMEs = NMEs.copy()
         return(model)
@@ -4948,14 +4974,26 @@ class SMEFT(object):
         
         return(result, scales)#, scale)
     
-    def ratios(self, WC = None, savefig = False, plot = False, reference_isotope = "76Ge", normalized = True, method=None, vary = False, n_points = 100, addgrid = True, file = "ratios.png"):
+    def ratios(self, reference_isotope = "76Ge", normalized = True, 
+               WC = None, method=None, vary = False, n_points = 100):
         
         model = self.generate_LEFT_model(WC, method, LEC = None)
         
-        return(model.ratios(savefig = savefig, plot = plot, file = file,
-                            reference_isotope = reference_isotope, 
-                            normalized = normalized, method=method, 
-                            vary = vary, n_points = n_points))
+        return(model.ratios(reference_isotope = reference_isotope, 
+                            normalized = normalized, vary = vary, 
+                            n_points = n_points))
+    
+    def plot_ratios(self, reference_isotope = "76Ge", normalized = True, 
+                    WC = None, method=None, vary = False, n_points = 100, 
+                    color = "b", addgrid = True, savefig = False, file = "ratios.png"):
+        
+        model = self.generate_LEFT_model(WC, method, LEC = None)
+        
+        return(model.plot_ratios(reference_isotope = reference_isotope, 
+                                 normalized = normalized, vary = vary, 
+                                 n_points = n_points, color = color,
+                                 addgrid = addgrid, savefig = savefig, 
+                                 file = file))
 
 
 
