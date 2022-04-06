@@ -219,24 +219,24 @@ if path_option == "Define a model":
         st.markdown(get_table_download_link_csv(hl.T), unsafe_allow_html=True)
         st.table(hl.T)
         st.subheader("Angular correlation")
-        ge_idx = int(np.where(LEFT_model.element_names=="76Ge")[0][0])
-        plot_isotope = st.selectbox("Choose an isotope:", options = LEFT_model.element_names, index = ge_idx, 
+        ge_idx = int(np.where(LEFT_model.isotope_names=="76Ge")[0][0])
+        plot_isotope = st.selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, 
                                     key = "angularcorrisotope")
         #st.line_chart({name: np.real(LEFT_model.angular_corr(np.linspace(1e-5,1-1e-5, 1000)))})
         show_mbb1 = st.checkbox("Compare to mass mechanism?", key="show_mbb1")
-        fig_angular_corr = LEFT_model.plot_corr(show_mbb=show_mbb1, element_name = plot_isotope)
+        fig_angular_corr = LEFT_model.plot_corr(show_mbb=show_mbb1, isotope = plot_isotope)
         st.pyplot(fig_angular_corr)
         st.subheader("Normalized single electron spectrum")
-        ge_idx = int(np.where(LEFT_model.element_names=="76Ge")[0][0])
-        plot_isotope2 = st.selectbox("Choose an isotope:", options = LEFT_model.element_names, index = ge_idx, 
+        ge_idx = int(np.where(LEFT_model.isotope_names=="76Ge")[0][0])
+        plot_isotope2 = st.selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, 
                                      key = "spectraisotope")
-        integral = integrate.quad(lambda E: LEFT_model.spectra(E), 0, 1)[0]
+        integral = integrate.quad(lambda E: LEFT_model.spectrum(E), 0, 1)[0]
         #st.line_chart({name: np.real(LEFT_model.spectra(np.linspace(1e-5,1-1e-5, 1000))/integral)})
         show_mbb2 = st.checkbox("Compare to mass mechanism?", key="show_mbb2")
-        fig_spec = LEFT_model.plot_spec(show_mbb=show_mbb2, element_name = plot_isotope2)
+        fig_spec = LEFT_model.plot_spec(show_mbb=show_mbb2, isotope = plot_isotope2)
         st.pyplot(fig_spec)
         st.subheader("Half-life ratios")
-        reference_isotope = st.selectbox("Choose the reference isotope:", options = LEFT_model.element_names, index = ge_idx)
+        reference_isotope = st.selectbox("Choose the reference isotope:", options = LEFT_model.isotope_names, index = ge_idx)
         ratio_option_cols = st.beta_columns(2)
         compare = ratio_option_cols[0].checkbox("Compare to mass mechanism?", help = "If you check this box we will normalize the ratios to the mass mechanisms ratio values")
         vary = ratio_option_cols[1].checkbox("Vary unknown LECs?", help = "If you check this box we will vary all unknown LECs around their order of magnitude estimate O (i.e. from log_10(O) to log10(O+1)) . g_nuNN will be varied 50% around it's theoretical estimate.")
@@ -244,7 +244,9 @@ if path_option == "Define a model":
             n_points = st.number_input("How many variations do you want to run? Remember: The higher this number the longer the calculation takes..." , value=100)
         else:
             n_points = 1
-        fig = LEFT_model.ratios(plot=True, vary = vary, n_points = n_points, 
+        #fig = LEFT_model.ratios(plot=True, vary = vary, n_points = n_points, 
+        #                        normalized = compare, reference_isotope = reference_isotope)
+        fig = LEFT_model.plot_ratios(vary = vary, n_points = n_points, 
                                 normalized = compare, reference_isotope = reference_isotope)
         st.pyplot(fig)
         st.subheader("Vary single Wilson coefficients")
@@ -255,9 +257,9 @@ if path_option == "Define a model":
             #if plotoptions == "m_eff":
             if plotoptions in ["m_eff", "half_life", "1/half_life"]:
 
-                ge_idx = int(np.where(LEFT_model.element_names=="76Ge")[0][0])
+                ge_idx = int(np.where(LEFT_model.isotope_names=="76Ge")[0][0])
                 plot_cols = st.beta_columns(3)
-                plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.element_names, index = ge_idx, key = "isotope"+str(plotidx))
+                plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], key = "plottype"+str(plotidx), help = "Scatter plots vary all the relevant parameters and generate a number of scenarios while line plots calculate the minimum and maximum by running an optimization algorithm. If you want to vary also the LECs you will need to choose scatter plots.")
                 vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx), help = "Choose the Wilson coefficient you want to vary on the x-axis")
                 show_cosmo = False
@@ -300,21 +302,21 @@ if path_option == "Define a model":
                         if show_cosmo:
                             m_cosmo = cosmo_options[1].number_input("Limit on the sum of neutrino masses [meV]", help="Preset limit: S.R. Choudhury and S. Hannestad, 2019, arxiv:1907.12598", value = 150, key = "m_cosmo"+str(plotidx))*1e-3
                     if plotoptions == "m_eff":
-                        fig = LEFT_model.plot_m_eff(cosmo=show_cosmo, element_name = plot_isotope, 
+                        fig = LEFT_model.plot_m_eff(cosmo=show_cosmo, isotope = plot_isotope, 
                                                     compare_to_mass = compare_to_mass, m_cosmo = m_cosmo,
                                                     normalize_to_mass = normalize_to_mass, 
                                                     vary_WC = vary_WC, n_dots = 200, 
                                                     x_min = x_min, x_max = x_max, 
                                                     y_min = y_min, y_max = y_max)
                     elif plotoptions == "half_life":
-                        fig = LEFT_model.plot_t_half(cosmo=show_cosmo, element_name = plot_isotope, 
+                        fig = LEFT_model.plot_t_half(cosmo=show_cosmo, isotope = plot_isotope, 
                                                     compare_to_mass = compare_to_mass, m_cosmo = m_cosmo,
                                                     normalize_to_mass = normalize_to_mass, 
                                                     vary_WC = vary_WC, n_dots = 200, 
                                                     x_min = x_min, x_max = x_max, 
                                                     y_min = y_min, y_max = y_max)
                     elif plotoptions == "1/half_life":
-                        fig = LEFT_model.plot_t_half_inv(cosmo=show_cosmo, element_name = plot_isotope, 
+                        fig = LEFT_model.plot_t_half_inv(cosmo=show_cosmo, isotope = plot_isotope, 
                                                     compare_to_mass = compare_to_mass, m_cosmo = m_cosmo,
                                                     normalize_to_mass = normalize_to_mass, 
                                                     vary_WC = vary_WC, n_dots = 200, 
@@ -353,19 +355,19 @@ if path_option == "Define a model":
                         fig = LEFT_model.plot_m_eff_scatter(vary_WC = vary_WC, vary_phases = vary_phases, 
                                                             compare_to_mass = compare_to_mass, n_dots = n_points, 
                                                             normalize_to_mass = normalize_to_mass,
-                                                            cosmo=show_cosmo, m_cosmo = m_cosmo, element_name = plot_isotope, 
+                                                            cosmo=show_cosmo, m_cosmo = m_cosmo, isotope = plot_isotope, 
                                                             vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)#, compare_to_mass = compare_to_mass, normalize_to_mass = normalize_to_mass)
                     if plotoptions == "half_life":
                         fig = LEFT_model.plot_t_half_scatter(vary_WC = vary_WC, vary_phases = vary_phases, 
                                                             compare_to_mass = compare_to_mass, n_dots = n_points, 
                                                             normalize_to_mass = normalize_to_mass,
-                                                            cosmo=show_cosmo, m_cosmo = m_cosmo, element_name = plot_isotope, 
+                                                            cosmo=show_cosmo, m_cosmo = m_cosmo, isotope = plot_isotope, 
                                                             vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)#, compare_to_mass = compare_to_mass, normalize_to_mass = normalize_to_mass)
                     if plotoptions == "1/half_life":
                         fig = LEFT_model.plot_t_half_inv_scatter(vary_WC = vary_WC, vary_phases = vary_phases, 
                                                             compare_to_mass = compare_to_mass, n_dots = n_points, 
                                                             normalize_to_mass = normalize_to_mass,
-                                                            cosmo=show_cosmo, m_cosmo = m_cosmo, element_name = plot_isotope, 
+                                                            cosmo=show_cosmo, m_cosmo = m_cosmo, isotope = plot_isotope, 
                                                             vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)#, compare_to_mass = compare_to_mass, normalize_to_mass = normalize_to_mass)
 
                 st.pyplot(fig)
@@ -522,23 +524,23 @@ if path_option == "Define a model":
         st.markdown(get_table_download_link_csv(hl.T), unsafe_allow_html=True)
         st.table(hl.T)
         st.subheader("Angular correlation")
-        ge_idx = int(np.where(LEFT_model.element_names=="76Ge")[0][0])
-        plot_isotope = st.selectbox("Choose an isotope:", options = LEFT_model.element_names, index = ge_idx, 
+        ge_idx = int(np.where(LEFT_model.isotope_names=="76Ge")[0][0])
+        plot_isotope = st.selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, 
                                      key = "angularcorrisotope")
         #st.line_chart({name: np.real(LEFT_model.angular_corr(np.linspace(1e-5,1-1e-5, 1000)))})
         show_mbb1 = st.checkbox("Compare to mass mechanism?", key="show_mbb1")
-        fig_angular_corr = LEFT_model.plot_corr(show_mbb=show_mbb1, element_name = plot_isotope)
+        fig_angular_corr = LEFT_model.plot_corr(show_mbb=show_mbb1, isotope = plot_isotope)
         st.pyplot(fig_angular_corr)
         st.subheader("Normalized single electron spectrum")
-        plot_isotope2 = st.selectbox("Choose an isotope:", options = LEFT_model.element_names, index = ge_idx, 
+        plot_isotope2 = st.selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, 
                                      key = "spectraisotope")
         #integral = integrate.quad(lambda E: LEFT_model.spectra(E), 0, 1)[0]
         #st.line_chart({name: np.real(LEFT_model.spectra(np.linspace(1e-5,1-1e-5, 1000))/integral)})
         show_mbb2 = st.checkbox("Compare to mass mechanism?", key="show_mbb2")
-        fig_spec = LEFT_model.plot_spec(show_mbb=show_mbb2, element_name = plot_isotope2)
+        fig_spec = LEFT_model.plot_spec(show_mbb=show_mbb2, isotope = plot_isotope2)
         st.pyplot(fig_spec)
         st.subheader("Half-life ratios")
-        reference_isotope = st.selectbox("Choose the reference isotope:", options = LEFT_model.element_names, index = ge_idx)
+        reference_isotope = st.selectbox("Choose the reference isotope:", options = LEFT_model.isotope_names, index = ge_idx)
         ratio_option_cols = st.beta_columns(2)
         compare = ratio_option_cols[0].checkbox("Compare to mass mechanism?")
         vary = ratio_option_cols[1].checkbox("Vary unknown LECs?")
@@ -556,9 +558,9 @@ if path_option == "Define a model":
             st.write("Note: Any value of m_bb that you set for you model will be replaced for these plots according to the minimal neutrino mass. If you didn't set any value we will assume that your model is present additionally to the standard mass mechanism.")
             if plotoptions == "m_eff":
 
-                ge_idx = int(np.where(LEFT_model.element_names=="76Ge")[0][0])
+                ge_idx = int(np.where(LEFT_model.isotope_names=="76Ge")[0][0])
                 plot_cols = st.beta_columns(3)
-                plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.element_names, index = ge_idx, key = "isotope"+str(plotidx))
+                plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], key = "plottype"+str(plotidx))
                 vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx))
                 show_cosmo = False
@@ -566,7 +568,7 @@ if path_option == "Define a model":
                 #show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions)
                 if scatter_or_line == "Line":
                     show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions + str(plotidx), help = "This plots a grey area excluded from cosmology limits on the sum of neutrino masses translated to the corresponding minimal neutrino mass in normal ordering.")
-                    fig = LEFT_model.plot_m_eff(cosmo=show_cosmo, element_name = plot_isotope)
+                    fig = LEFT_model.plot_m_eff(cosmo=show_cosmo, isotope = plot_isotope)
                 else:
                     xlim_cols = st.beta_columns(2)
                     if vary_WC == "m_min":
@@ -595,21 +597,21 @@ if path_option == "Define a model":
                         if show_cosmo:
                             m_cosmo = cosmo_options[1].number_input("Limit on the sum of neutrino masses [meV]", help="Preset limit: S.R. Choudhury and S. Hannestad, 2019, arxiv:1907.12598", value = 150, key = "m_cosmo"+str(plotidx))*1e-3
                     fig = LEFT_model.plot_m_eff_scatter(vary_WC = vary_WC, vary_phases = vary_phases,  
-                                                        cosmo=show_cosmo, m_cosmo = m_cosmo, element_name = plot_isotope, 
+                                                        cosmo=show_cosmo, m_cosmo = m_cosmo, isotope = plot_isotope, 
                                                         vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)
 
                 st.pyplot(fig)
             elif plotoptions == "half_life":
-                ge_idx = int(np.where(LEFT_model.element_names=="76Ge")[0][0])
+                ge_idx = int(np.where(LEFT_model.isotope_names=="76Ge")[0][0])
                 plot_cols = st.beta_columns(3)
-                plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.element_names, index = ge_idx, key = "isotope"+str(plotidx))
+                plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], key = "plottype"+str(plotidx))
                 vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx))
                 show_cosmo = False
                 m_cosmo = 0.15
                 if scatter_or_line == "Line":
                     show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions+str(plotidx), help = "This plots a grey area excluded from cosmology limits on the sum of neutrino masses translated to the corresponding minimal neutrino mass in normal ordering.")
-                    fig = LEFT_model.plot_t_half(cosmo=show_cosmo, element_name = plot_isotope)
+                    fig = LEFT_model.plot_t_half(cosmo=show_cosmo, isotope = plot_isotope)
                 else:
                     xlim_cols = st.beta_columns(2)
                     if vary_WC == "m_min":
@@ -638,14 +640,14 @@ if path_option == "Define a model":
                         if show_cosmo:
                             m_cosmo = cosmo_options[1].number_input("Limit on the sum of neutrino masses [meV]", help="Preset limit: S.R. Choudhury and S. Hannestad, 2019, arxiv:1907.12598", value = 150, key = "m_cosmo"+str(plotidx))*1e-3
                     fig = LEFT_model.plot_t_half_scatter(vary_WC = vary_WC, vary_phases = vary_phases, 
-                                                         cosmo=show_cosmo, m_cosmo = m_cosmo, element_name = plot_isotope, 
+                                                         cosmo=show_cosmo, m_cosmo = m_cosmo, isotope = plot_isotope, 
                                                          vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)
 
                 st.pyplot(fig)
             elif plotoptions == "1/half_life":
-                ge_idx = int(np.where(LEFT_model.element_names=="76Ge")[0][0])
+                ge_idx = int(np.where(LEFT_model.isotope_names=="76Ge")[0][0])
                 plot_cols = st.beta_columns(3)
-                plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.element_names, 
+                plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.isotope_names, 
                                                       index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], 
                                                          key = "plottype"+str(plotidx))
@@ -655,7 +657,7 @@ if path_option == "Define a model":
                 m_cosmo = 0.15
                 if scatter_or_line == "Line":
                     show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions, help = "This plots a grey area excluded from cosmology limits on the sum of neutrino masses translated to the corresponding minimal neutrino mass in normal ordering.")
-                    fig = LEFT_model.plot_t_half_inv(cosmo=show_cosmo, element_name = plot_isotope)
+                    fig = LEFT_model.plot_t_half_inv(cosmo=show_cosmo, isotope = plot_isotope)
                 else:
                     xlim_cols = st.beta_columns(2)
                     if vary_WC == "m_min":
@@ -683,7 +685,7 @@ if path_option == "Define a model":
                         if show_cosmo:
                             m_cosmo = cosmo_options[1].number_input("Limit on the sum of neutrino masses [meV]", help="Preset limit: S.R. Choudhury and S. Hannestad, 2019, arxiv:1907.12598", value = 150, key = "m_cosmo"+str(plotidx))*1e-3
                     fig = LEFT_model.plot_t_half_inv_scatter(vary_WC = vary_WC, vary_phases = vary_phases, 
-                                                             cosmo=show_cosmo, m_cosmo = m_cosmo, element_name = plot_isotope, 
+                                                             cosmo=show_cosmo, m_cosmo = m_cosmo, isotope = plot_isotope, 
                                                              vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)
                 st.pyplot(fig)
             return(plotoptions)
@@ -756,7 +758,7 @@ elif path_option == "Study operator limits":
     model_option = st.sidebar.selectbox("Do you want study limits on LEFT or SMEFT operators?", options = ["-","LEFT", "SMEFT"])
     if model_option == "LEFT":
         LEFT_model = EFT.LEFT({}, method = method)
-        isotopes = LEFT_model.element_names
+        isotopes = LEFT_model.isotope_names
         st.sidebar.subheader("Experimental Limits")
         st.sidebar.write("Please enter the experimental limits for each isotope. The initial values represent the current experimental limits that we could find. We try to keep these limits as recent as possible. If we missed some limit please contact us. [10^24 years]")
         experiments = {}
@@ -771,7 +773,7 @@ elif path_option == "Study operator limits":
         onlygroups = st.checkbox("Show only groups?", help = "Instead of showing the limits for all single Wilson coefficients you can choose to summarize those that give the same contributions.")
         for isotope in experiments:
             if experiments[isotope]>0:
-                limit, scales = LEFT_model.get_limits2(experiments[isotope], element_name=isotope, onlygroups = onlygroups)
+                limit, scales = LEFT_model.get_limits2(experiments[isotope], isotope=isotope, onlygroups = onlygroups)
                 limits[isotope] = np.array(list(limit.values()))
             percent_complete += 1/(len(experiments))
             #st.write(limit)
@@ -927,7 +929,7 @@ elif path_option == "Study operator limits":
         SMEFT_model = EFT.SMEFT({}, method = method, scale = 82)
         LEFT_model = EFT.LEFT({}, method=method)
         #st.write(list(SMEFT_model.WC.keys()))
-        isotopes = LEFT_model.element_names
+        isotopes = LEFT_model.isotope_names
         st.sidebar.subheader("Experimental Limits")
         st.sidebar.write("Please enter the experimental limits for each isotope. The initial values represent the current experimental limits that we could find. We try to keep these limits as recent as possible. If we missed some limit please contact us. [10^24 years]")
         experiments = {}
@@ -942,7 +944,7 @@ elif path_option == "Study operator limits":
         onlygroups = st.checkbox("Show only groups?", help = "Instead of showing the limits for all single Wilson coefficients you can choose to summarize those that give the same contributions.")
         for isotope in experiments:
             if experiments[isotope]>0:
-                limit, scales = SMEFT_model.get_limits2(experiments[isotope], element_name=isotope, onlygroups = onlygroups)
+                limit, scales = SMEFT_model.get_limits2(experiments[isotope], isotope_name=isotope, onlygroups = onlygroups)
                 limits[isotope] = np.array(list(limit.values()))
                 #for operator in limit:
                     #if limit[operator] == np.inf:
