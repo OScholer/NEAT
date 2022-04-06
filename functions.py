@@ -24,7 +24,7 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
     #if eft == "LEFT":
     SMEFT_WCs = EFT.SMEFT_WCs
     g_A = 1.27
-    def get_constants(element_name):
+    def get_constants(isotope):
         model=EFT.LEFT({}, method=method)
         is_SMEFT = False
         if WCx in SMEFT_WCs:
@@ -37,29 +37,29 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
             WC[WCy] = WCsy
             for operator in model.WC:
                 model.WC[operator] = WC[WCx][operator]
-            Ax, Mx = model.amplitudes(element_name = element_name, WC = model.WC)
-            tx = model.t_half(element_name = element_name)
+            Ax, Mx = model.amplitudes(isotope = isotope, WC = model.WC)
+            tx = model.t_half(isotope = isotope)
             for operator in model.WC:
                 model.WC[operator] = 0
             for operator in model.WC:
                 model.WC[operator] = WC[WCy][operator]
-            Ay, My = model.amplitudes(element_name = element_name, WC = model.WC)
-            ty = model.t_half(element_name = element_name)
+            Ay, My = model.amplitudes(isotope = isotope, WC = model.WC)
+            ty = model.t_half(isotope = isotope)
             for operator in model.WC:
                 model.WC[operator] = 0
         else:
             for operator in model.WC:
                 model.WC[operator] = 0
             model.WC[WCx] = 1
-            Ax, Mx = model.amplitudes(element_name = element_name, WC = model.WC)
-            tx = model.t_half(element_name = element_name)
+            Ax, Mx = model.amplitudes(isotope = isotope, WC = model.WC)
+            tx = model.t_half(isotope = isotope)
             model.WC[WCx] = 0
             model.WC[WCy] = 1
-            Ay, My = model.amplitudes(element_name = element_name, WC = model.WC)
-            ty = model.t_half(element_name = element_name)
+            Ay, My = model.amplitudes(isotope = isotope, WC = model.WC)
+            ty = model.t_half(isotope = isotope)
             model.WC[WCy] = 0
-        element = model.elements[element_name]
-        G = model.to_G(element_name)
+        element = model.elements[isotope]
+        G = model.to_G(isotope)
         #m_e = pc["electron mass energy equivalent in MeV"][0]
 
         #Some PSFs need a rescaling due to different definitions in DOIs paper and 1806...
@@ -93,8 +93,8 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
     radius = {}
     for experiment in experiments:
         limit = experiments[experiment][0]
-        element_name = experiments[experiment][1]
-        model, tx, Ax, ty, Ay, G, is_SMEFT = get_constants(element_name)
+        isotope = experiments[experiment][1]
+        model, tx, Ax, ty, Ay, G, is_SMEFT = get_constants(isotope)
         if is_SMEFT:
             fac = 3
         else:
@@ -116,8 +116,8 @@ def plot_contours(WCx, WCy, experiments = {"GERDA": [5e+25, "76Ge"]}, method = "
     print(x_min, x_max)
     for experiment in experiments:
         limit = experiments[experiment][0]
-        element_name = experiments[experiment][1]
-        model, tx, Ax, ty, Ay, G, is_SMEFT = get_constants(element_name)
+        isotope = experiments[experiment][1]
+        model, tx, Ax, ty, Ay, G, is_SMEFT = get_constants(isotope)
         
         if varyphases:
             phases = np.linspace(0, np.pi, n_vary)

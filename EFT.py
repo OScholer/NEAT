@@ -410,7 +410,7 @@ def run_LEFT(WC, initial_scale=80, final_scale = 2):
 
 
 
-
+#running matrix that connects m_W and xPT scales in LEFT
 matrix = np.zeros((len(LEFT_WCs), len(LEFT_WCs)))
 idx = 0
 for operator in LEFT_WCs:
@@ -530,7 +530,7 @@ class LEFT(object):
                 self.EpsilonWC[operator] = WC[operator]
             self.CWC = self.change_basis(basis=self.basis, inplace = False)
         else:
-            print("Basis",basis,'is not defined. Choose either "C" for the Grasser basis used in the master formula, or "epsilon" for the old standard basis by Päs et al. Setting the basis to C...')
+            warnings.warn("Basis",basis,'is not defined. Choose either "C" for the Grasser basis used in the master formula, or "epsilon" for the old standard basis by Päs et al. Setting the basis to C...')
         
         
         #WC Dict with WCs @ chiPT scale used for calculations
@@ -890,13 +890,18 @@ class LEFT(object):
         return self.alpha_s(mu)/(4*np.pi) *(np.dot(M, C))
 
     #the primed operators as well as the LR run the same
-    def run(self, WC = None, updown = "down"):
+    def run(self, WC = None, updown = "down", inplace = False):
         if WC == None:
             WC = self.WC.copy()
         else:
             WCcopy = WC.copy()
             WC = self.WC.copy()
             
+            #set 
+            for operator in WC:
+                WC[operator] = 0
+                
+            #overwrite with new WCs
             for operator in WCcopy:
                 WC[operator] = WCcopy[operator]
         
@@ -908,6 +913,9 @@ class LEFT(object):
         for idx in range(len(WC)):
             operator = list(WC.keys())[idx]
             new_WC[operator] = new_WC_values[idx]
+            
+        if inplace:
+            self.WC = new_WC
             
         return(new_WC)
         
@@ -1099,6 +1107,7 @@ class LEFT(object):
             C = self.WC.copy()
         else:
             C = self.WC.copy()
+            
             for x in C:
                 C[x] = 0
             for x in WC:
@@ -1556,10 +1565,10 @@ class LEFT(object):
                          'VLme': 1,
                          'VRE': 1,
                          'VRme': 1,
-                         '2NN': 157.91367041742973,
-                         '3NN': 157.91367041742973,
-                         '4NN': 157.91367041742973,
-                         '5NN': 157.91367041742973,
+                         '2NN': 157.91367041742973,  #(4pi)^2
+                         '3NN': 157.91367041742973,  #(4pi)^2
+                         '4NN': 157.91367041742973,  #(4pi)^2
+                         '5NN': 157.91367041742973,  #(4pi)^2
                          'nuNN': -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
                        }
                 LEC_backup = self.LEC.copy()
@@ -1871,8 +1880,8 @@ class LEFT(object):
             plt.savefig(file, dpi = 300)
         return(fig)
     
-    def get_limits2(self, half_live, isotope = "76Ge", basis = None, method = None, onlygroups = False):
-    #this function can calculate the limits on the different LEFT coefficients for a given experimental half_live and isotope
+    def get_limits(self, half_life, isotope = "76Ge", basis = None, method = None, onlygroups = False, scale = "up"):
+    #this function can calculate the limits on the different LEFT coefficients for a given experimental half_life and isotope
     #the limits are calculate at the scale "scale" and for the chosen basis
         
         
@@ -1882,18 +1891,19 @@ class LEFT(object):
             pass
         elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
             print("Changing method to",method)
-            self.method = method
-            self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
+            method = method
         elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
             method = self.method
         else:
+            method = self.method
             pass
             
         #method = self.method
         
         #vev = 246
-        result_2GeV = {}
+        results_2GeV = {}
+        results = {}
         scales = {}
         #result_80GeV = {}
         #scale_80GeV = {}
@@ -1903,39 +1913,103 @@ class LEFT(object):
 
         #calculate the limits on the WCs at the scale of 2GeV
         if onlygroups:
-            WCgroups = ["m_bb" , "VL(6)", 
-                        "VR(6)", "T(6)", 
-                        "SL(6)", "VL(7)", "1L(9)", 
-                        "2L(9)", "3L(9)", 
-                        "4L(9)", "5L(9)", 
-                        "6(9)", "7(9)"]
-
-            #define labels for plots
-            WC_names = {"m_bb"  : "m_bb", 
-                        "VL(6)" : "VL(6)", 
-                        "VR(6)" : "VR(6)", 
-                        "T(6)"  : "T(6)" , 
-                        "SL(6)" : "S(6)", 
-                        "VL(7)" : "V(7)"     , 
-                        "1L(9)" : "S1(9)",
-                        "2L(9)" : "S2(9)", 
-                        "3L(9)" : "S3(9)", 
-                        "4L(9)" : "S4(9)", 
-                        "5L(9)" : "S5(9)",
-                        "6(9)"  : "V(9)", 
-                        "7(9)"  : "Vtilde(9)"}
+            if basis in [None, "C", "c"]:
+                WCgroups = ["m_bb" , "VL(6)", 
+                            "VR(6)", "T(6)", 
+                            "SL(6)", "VL(7)", 
+                            "1L(9)", 
+                            "2L(9)", "3L(9)", 
+                            "4L(9)", "5L(9)", 
+                            "6(9)", "7(9)"]
+                #define labels for plots
+                WC_names = {"m_bb"  : "m_bb", 
+                            "VL(6)" : "VL(6)", 
+                            "VR(6)" : "VR(6)", 
+                            "T(6)"  : "T(6)" , 
+                            "SL(6)" : "S(6)", 
+                            "VL(7)" : "V(7)"     , 
+                            "1L(9)" : "S1(9)",
+                            "2L(9)" : "S2(9)", 
+                            "3L(9)" : "S3(9)", 
+                            "4L(9)" : "S4(9)", 
+                            "5L(9)" : "S5(9)",
+                            "6(9)"  : "V(9)", 
+                            "7(9)"  : "Vtilde(9)"
+                           }
+            else:
+                WCgroups = ["m_bb",
+                            "V+AV-A",
+                            "V+AV+A",
+                            "S+PS+P",
+                            "TRTR", 
+                            "VL(7)", 
+                            "1LLL", 
+                            "1LRL", 
+                            "2LLL",
+                            "3LLL", 
+                            "3LRL", 
+                            "4LLL", 
+                            "5LLL"
+                           ]
+                #define labels for plots
+                WC_names = {"m_bb"   : "m_bb", 
+                            "V+AV-A" : "V+AV-A", 
+                            "V+AV+A" : "V+AV+A", 
+                            "S+PS+P" : "S+P_X" , 
+                            "TRTR"   : "TRTR", 
+                            "VL(7)"  : "V(7)", 
+                            "1LLL"   : "1XX",
+                            "1LRL"   : "1XY",
+                            "2LLL"   : "2XX", 
+                            "3LLL"   : "3XX", 
+                            "3LRL"   : "3XY", 
+                            "4LLL"   : "4XX,XY",
+                            "5LLL"   : "5XX,XY"
+                           }
 
             
             for WC_name in WCgroups:
-                hl = self.t_half(WC = {WC_name:1}, method = method, isotope = isotope)
-                result_2GeV[WC_name] = np.sqrt(hl/half_live)
+                if scale in ["up", "mW", "m_W", "MW", "M_W"]:
+                    #run the WCs down to chipt to get limits on the WCs @ m_W
+                    if basis not in [None, "C", "c"]:
+                        WC = self.change_basis(WC = {WC_name : 1}, inplace = False, basis = "e")
+                    else:
+                        WC = {WC_name : 1}
+                    WC = self.run(WC, updown = "down")
+                else:
+                    if basis not in [None, "C", "c"]:
+                        WC = change_basis(WC = {WC_name : 1}, inplace = False, basis = "e")
+                    else:
+                        WC = {WC_name : 1}
+                hl = self.t_half(WC = WC, method = method, isotope = isotope)
+                #hl = self.t_half(WC = {WC_name:1}, method = method, isotope = isotope)
+                #results_2GeV[WC_name] = np.sqrt(hl/half_life)
+                results[WC_name] = np.sqrt(hl/half_life)
         else:
-            for WC_name in self.WC:
-                hl = self.t_half(WC = {WC_name:1}, method = method, isotope = isotope)
-                result_2GeV[WC_name] = np.sqrt(hl/half_live)
+            if basis in [None, "C", "c"]:
+                WCs = self.WC.copy()
+            else:
+                WCs = self.EpsilonWC.copy()
+            for WC_name in WCs:
+                if scale in ["up", "mW", "m_W", "MW", "M_W"]:
+                    #run the WCs down to chipt to get limits on the WCs @ m_W
+                    if basis not in [None, "C", "c"]:
+                        WC = self.change_basis(WC = {WC_name : 1}, inplace = False, basis = "e")
+                    else:
+                        WC = {WC_name : 1}
+                    WC = self.run(WC, updown = "down")
+                else:
+                    if basis not in [None, "C", "c"]:
+                        WC = change_basis(WC = {WC_name : 1}, inplace = False, basis = "e")
+                    else:
+                        WC = {WC_name : 1}
+                hl = self.t_half(WC = WC, method = method, isotope = isotope)
+                #hl = self.t_half(WC = {WC_name:1}, method = method, isotope = isotope)
+                #results_2GeV[WC_name] = np.sqrt(hl/half_life)
+                results[WC_name] = np.sqrt(hl/half_life)
 #run results up to the desired scale
         #results = self.run(result_2GeV, initial_scale = 2, final_scale = scale)
-        results = self.run(WC = result_2GeV, updown="up")
+        #results = self.run(WC = results_2GeV, updown="up")
         if onlygroups:
             res = {}
             for WC in WCgroups:
@@ -1953,25 +2027,68 @@ class LEFT(object):
         #calculate the corresponding scales of new physics assuming naturalness
         if onlygroups:
             for WC in WCgroups:
-                WC_name = WC_names[WC]
-                if WC_name == "m_bb":
-                    scales[WC_name] = np.absolute(results[WC_name])*1e+9
-                elif WC_name in ["SR(6)", "SL(6)", "T(6)", "VL(6)", "VR(6)", "VL(7)", "VR(7)", "1L(9)", "4L(9)", "5L(9)"]:
-                    scales[WC_name] = self.vev/(results[WC_name]**(1/3))/1000
+                WC_group_name = WC_names[WC]
+                if WC_group_name == "m_bb":
+                    scales[WC_group_name] = self.vev**2/(np.absolute(results[WC_group_name]))#*1e+9)
+                elif WC in ["SR(6)", "S+PS+P",
+                                 "SL(6)", "S+PS-P",
+                                 "T(6)",  "TRTR",
+                                 "VL(6)", "V+AV-A",
+                                 "VR(6)", "V+AV+A",
+                                 "VL(7)", 
+                                 "VR(7)",
+                                 "1L(9)", "3LLL", 
+                                 "4L(9)", "3RLL", "3LRL", #with redundancies in epsilon basis
+                                 "5L(9)", "1RLL", "1LRL"  #with redundancies in epsilon basis
+                                ]:
+                    if basis not in [None, "C", "c"]:
+                        if (WC[0] not in ["1", "3"]) and (WC[-2] != "7"):
+                            prefactor = 2
+                        elif WC[-2] != "7":
+                            prefactor = self.vev/(4*self.m_N)
+                        else:
+                            prefactor = 1
+                            print("hi")
+                    else:
+                        prefactor = 1
+                    scales[WC_group_name] = self.vev/((prefactor * results[WC_group_name])**(1/3))/1000
                 else:
-                    scales[WC_name] = self.vev/(results[WC_name]**(1/5))/1000
+                    if basis not in [None, "C", "c"]:
+                        prefactor = (self.vev/(2*self.m_N))
+                    else:
+                        prefactor = 1
+                    scales[WC_group_name] = self.vev/((prefactor * results[WC_group_name])**(1/5))/1000
         else:
-            for WC_name in self.WC:
+            for WC_name in WCs:
                 if WC_name == "m_bb":
-                    scales[WC_name] = np.absolute(results[WC_name])*1e+9
-                elif WC_name in ["SR(6)", "SL(6)", "T(6)", "VL(6)", "VR(6)", "VL(7)", "VR(7)", "1L(9)", "4L(9)", "5L(9)"]:
+                    scales[WC_name] = self.vev**2/(np.absolute(results[WC_name]))#*1e+9)
+                elif WC_name in ["SR(6)", "S+PS+P",
+                                 "SL(6)", "S+PS-P",
+                                 "T(6)",  "TRTR",
+                                 "VL(6)", "V+AV-A",
+                                 "VR(6)", "V+AV+A",
+                                 "VL(7)", 
+                                 "VR(7)",
+                                 "1L(9)", "3LLL", 
+                                 "4L(9)", "3RLL", "3LRL", #with redundancies in epsilon basis
+                                 "5L(9)", "1RLL", "1LRL"  #with redundancies in epsilon basis
+                                ]:
                     scales[WC_name] = self.vev/(results[WC_name]**(1/3))/1000
                 else:
                     scales[WC_name] = self.vev/(results[WC_name]**(1/5))/1000
+        #if basis not in [None, "C", "c"]:
+        #    for scale in scales:
+        #        if scale not in ["m_bb", "VL(7)", "VR(7)"]:
+        #            scales[scale] *= 2 #because of different scaling prefactors
+        #        if scale not in ["m_bb", "VL(7)", "VR(7)", "S+PS+P", 
+        #                         "S+PS-P",  "TRTR", "V+AV-A", "V+AV+A"]:
+        #            scales[scale] *= 2 * self.m_N/self.vev
+                    
         return(results, scales)
+        #return(results, scales)
 
-    def get_limits(self, half_live, isotope = "76Ge", scale = 80, basis = None, method=None):
-    #this function can calculate the limits on the different LEFT coefficients for a given experimental half_live and isotope
+    def get_limits_old(self, half_life, isotope = "76Ge", scale = 80, basis = None, method=None):
+    #this function can calculate the limits on the different LEFT coefficients for a given experimental half_life and isotope
     #the limits are calculate at the scale "scale" and for the chosen basis
         
         
@@ -2023,7 +2140,7 @@ class LEFT(object):
                               + G["09"] * np.absolute(amp["M"])**2
                               + G["06"] * ((amp["nu"]-amp["R"])*np.conj(amp["M"])).real)
             #return expected hl - experimental hl to search for root
-            return(1/inverse_result-half_live)
+            return(1/inverse_result-half_life)
         
         #vev = 246
         result_2GeV = {}
@@ -2567,7 +2684,7 @@ class LEFT(object):
         IO_max = np.zeros(n_dots)
         
         if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
-            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass m_min, the sum of neutrino masses m_sum or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
         if compare_to_mass or normalize_to_mass:
             NO_min_mbb = np.zeros(n_dots)
@@ -2735,7 +2852,7 @@ class LEFT(object):
                 #if vary_WC != "m_sum":
                 plt.plot(xNO,NO_min_mbb, "k", linewidth = 1)
                 plt.plot(xNO,NO_max_mbb, "k", linewidth = 1)
-                plt.fill_between(M, NO_max_mbb, NO_min_mbb, 
+                plt.fill_between(xNO, NO_max_mbb, NO_min_mbb, 
                                  linewidth = 1, 
                                  facecolor = [0,0,0, alpha_mass],
                                  edgecolor = [0,0,0,1],
@@ -2743,9 +2860,9 @@ class LEFT(object):
                 
             elif ordering == "IO" and (vary_WC == "m_min" or vary_WC == "m_sum"):
                 #if vary_WC != "m_sum":
-                plt.plot(xIO_min_mbb, "k", linewidth = 1)
-                plt.plot(xIO,IO_max_mbb, "k", linewidth = 1)
-                plt.fill_between(M, IO_max_mbb, IO_min_mbb, 
+                plt.plot(xIO, IO_min_mbb, "k", linewidth = 1)
+                plt.plot(xIO, IO_max_mbb, "k", linewidth = 1)
+                plt.fill_between(xIO, IO_max_mbb, IO_min_mbb, 
                                  linewidth = 1, 
                                  facecolor = [0,0,0, alpha_mass],
                                  edgecolor = [0,0,0,1],
@@ -2831,7 +2948,7 @@ class LEFT(object):
                 #except:
                 #    isot = "76Ge"
                 #convert half-life into m_bb limit
-                y_data = self.get_limits2(y_data, isotope = isotope)[0]["m_bb"]*1e+9
+                y_data = self.get_limits(y_data, isotope = isotope)[0]["m_bb"]*1e+9
                 try:
                     color     = experiments[experiment][1]
                 except:
@@ -2851,7 +2968,7 @@ class LEFT(object):
                     plt.axhline(y_data, linewidth = 1, color = color, alpha = alpha)
                     plt.text(x = x_min, y = y_data, s = experiment, fontsize = 15)
                 elif plot_type == "fill":
-                    plt.fill_between(M, y_max, y_data, color = color, alpha = alpha)
+                    plt.fill_between(xNO, y_max, y_data, color = color, alpha = alpha)
                     plt.text(x = x_min, y = y_data, s = experiment, fontsize = 15)
                 else:
                     print("plot_type", plot_type, "unknown. Doing a line Plot")
@@ -3020,7 +3137,7 @@ class LEFT(object):
         IO_min = np.zeros(n_dots)
         IO_max = np.zeros(n_dots)
         if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
-            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass m_min, the sum of neutrino masses m_sum or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
         
         if compare_to_mass or normalize_to_mass:
@@ -3211,7 +3328,7 @@ class LEFT(object):
                     plt.axhline(1/y_data, linewidth = 1, color = color, alpha = alpha)
                     plt.text(x = x_min, y = 1/y_data, s = experiment, fontsize = 15)
                 elif plot_type == "fill":
-                    plt.fill_between(M, y_max, 1/y_data, color = color, alpha = alpha)
+                    plt.fill_between(xNO, y_max, 1/y_data, color = color, alpha = alpha)
                     plt.text(x = x_min, y = 1/y_data, s = experiment, fontsize = 15)
                 else:
                     print("plot_type", plot_type, "unknown. Doing a line Plot")
@@ -3279,7 +3396,7 @@ class LEFT(object):
         IO_max = np.zeros(n_dots)
         
         if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
-            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass m_min, the sum of neutrino masses m_sum or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
         if compare_to_mass or normalize_to_mass:
             NO_min_mbb = np.zeros(n_dots)
@@ -3363,6 +3480,7 @@ class LEFT(object):
         else:
             xNO = MNOsum
             xIO = MIOsum
+            
         plt.plot(xNO,NO_min, colors[0], linewidth = 1)
         plt.plot(xNO,NO_max, colors[0], linewidth = 1)
 
@@ -3452,7 +3570,7 @@ class LEFT(object):
                     plt.axhline(y_data, linewidth = 1, color = color, alpha = alpha)
                     plt.text(x = x_min, y = y_data, s = experiment, fontsize = 15)
                 elif plot_type == "fill":
-                    plt.fill_between(M, y_min, y_data, color = color, alpha = alpha)
+                    plt.fill_between(xNO, y_min, y_data, color = color, alpha = alpha)
                     plt.text(x = x_min, y = y_data, s = experiment, fontsize = 15)
                 else:
                     print("plot_type", plot_type, "unknown. Doing a line Plot")
@@ -3589,8 +3707,8 @@ class LEFT(object):
                  'nuNN': -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
                }
         
-        if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
-            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+        if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass m_min, the sum of neutrino masses m_sum or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
             
         if compare_to_mass:
@@ -3624,17 +3742,37 @@ class LEFT(object):
         fig = plt.figure(figsize=(9, 8))
         points = np.zeros((n_dots,2))
         pointsIO = np.zeros((n_dots,2))
-        mspace = np.logspace(np.log10(x_min), np.log10(x_max), int(10*n_dots))
+        if vary_WC == "m_sum":
+            x_min = np.max([x_min, f.m_min_to_m_sum(0)["NO"]])
+            x_max = np.max([x_max, f.m_min_to_m_sum(0)["NO"]])
+            Msum = np.logspace(np.log10(x_min), np.log10(x_max), n_dots)
+            #print(Msum)
+            mspace = Msum.copy()
+            for idx in range(n_dots):
+                mspace[idx] = f.m_sum_to_m_min(Msum[idx])["NO"]
+            #x_min = np.max([f.m_sum_to_m_min(x_min)["NO"], 1e-10])
+            #x_max = np.max([f.m_sum_to_m_min(x_max)["NO"], 1e-10])
+            #Msum = np.logspace(x_min, x_max, n_dots)
+            
+            #print(x_min)
+            #print(x_max)
+        
+        #M = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), n_dots)
+        else:
+            mspace = np.logspace((np.log10(x_min)),(np.log10(x_max)), n_dots)
+        
+        
+        
         forbidden_LECsNO = []
         forbidden_LECsNOm = []
         forbidden_LECsIO = []
         forbidden_LECsIOm = []
-        if vary_WC != "m_min":
+        if vary_WC not in ["m_min", "m_sum"]:
             WC_backup = self.WC[vary_WC]
         m_backup = self.WC["m_bb"]
         LEC_backup = self.LEC.copy()
         for x in range(n_dots):
-            if vary_WC == "m_min":
+            if vary_WC in ["m_min", "m_sum"]:
                 m_min = np.random.choice(mspace)
             #for n_m_min in range(10):
             #    for n_LECs in range(10):
@@ -3644,6 +3782,12 @@ class LEFT(object):
                 mIO = self._m_bb(alpha, m_min, "IO")*1e-9
                 #model_standard.WC["m_bb"] = m
                 self.WC["m_bb"] = m
+                
+                if vary_WC == "m_sum":
+                    m_sum = f.m_min_to_m_sum(m_min)
+                    msum = m_sum["NO"]
+                    msumIO = m_sum["IO"]
+            
             else:
                 if vary_WC == "m_bb":
                     self.WC[vary_WC] = np.random.choice(mspace)*1e-9
@@ -3672,10 +3816,10 @@ class LEFT(object):
             
             
             points[x][1] = m_eff
-            if normalize_to_mass and vary_WC in ["m_min", "m_bb"]:
+            if normalize_to_mass and vary_WC in ["m_min", "m_bb", "m_sum"]:
                 points[x][1]/=self.WC["m_bb"]*1e+9
             
-            if vary_WC == "m_min":
+            if vary_WC in ["m_min", "m_sum"]:
                 self.WC["m_bb"] = mIO
                 #for LEC in LECs:
                 #    random_LEC = 3*2*(np.random.rand()-0.5)*LECs[LEC]
@@ -3689,9 +3833,13 @@ class LEFT(object):
                 M3 = self.amplitudes(isotope, self.WC)[1]["nu(3)"]
                 #m_effIO = np.absolute(self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * t**(-1/2))*1e+9
                 m_effIO = np.absolute(self.m_e / (g_A**2*M3*G01**(1/2)) * t**(-1/2))*1e+9
-                pointsIO[x][0] = m_min
+                if vary_WC == "m_sum":
+                    pointsIO[x][0] = msumIO
+                    points[x][0] = msum
+                else:
+                    pointsIO[x][0] = m_min
+                    points[x][0] = m_min
                 pointsIO[x][1] = m_effIO
-                points[x][0] = m_min
                 if normalize_to_mass and vary_WC in ["m_min"]:
                     pointsIO[x][1] /= self.WC["m_bb"]*1e+9
                     
@@ -3706,7 +3854,7 @@ class LEFT(object):
         print(points[:][1])
         self.WC["m_bb"] = m_backup
         self.LEC = LEC_backup.copy()
-        if vary_WC != "m_min":
+        if vary_WC not in ["m_min", "m_sum"]:
             self.WC[vary_WC] = WC_backup
         if y_min == None:
             y_min = np.min([np.min(points[:,1]), np.min(pointsIO[:,1])])
@@ -3722,15 +3870,15 @@ class LEFT(object):
             print(cosmo_limit)
             
             #m_cosmo
-            plt.fill_betweenx([y_min, y_max], [1], [cosmo_limit], alpha=0.1, color="k")
-        if vary_WC == "m_min":   
+            plt.fill_betweenx([y_min, y_max], [x_max], [cosmo_limit], alpha=0.1, color="k")
+        if vary_WC in ["m_min", "m_sum"]:   
             plt.plot(points[:,0],points[:,1], "b.", alpha = alpha_plot, label="NO", markersize = 0.15)
             plt.plot(pointsIO[:,0],pointsIO[:,1], "r.", alpha = alpha_plot, label="IO", markersize = 0.15)
         else:
             plt.plot(points[:,0],points[:,1], "b,", alpha = alpha_plot, label=vary_WC)
         plt.yscale("log")
         plt.xscale("log")
-        if vary_WC == "m_min":
+        if vary_WC in ["m_min", "m_sum"]:
             plt.legend(fontsize=20)
         if normalize_to_mass:
             plt.ylabel(r"$\left|\frac{m_{\beta\beta}^{eff}}{m_{\beta\beta}}\right|$", fontsize=20)
@@ -3738,6 +3886,8 @@ class LEFT(object):
             plt.ylabel(r"$|m_{\beta\beta}^{eff}|$ [eV]", fontsize=20)
         if vary_WC == "m_min":
             plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
+        elif vary_WC == "m_sum":
+            plt.xlabel(r"$\sum_i m_{i}$ [eV]", fontsize=20)
         else:
             if vary_WC == "m_bb":
                 plt.xlabel(r"$|m_{\beta\beta}|$ [eV]", fontsize=20)
@@ -3762,7 +3912,7 @@ class LEFT(object):
                 plt.plot(M_mbb,IO_max_mbb, "grey")
                 plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, color="k", alpha=0.1, label=r"$m_{\beta\beta}$")
                 plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, color="k", alpha=0.1)
-        if vary_WC == "m_min":
+        if vary_WC in ["m_min", "m_sum"]:
             legend_elements = [Line2D([0], [0], marker='o', color='w', label='NO',
                                   markerfacecolor='b', markersize=10),
                            Line2D([0], [0], marker='o', color='w', label='IO',
@@ -3781,8 +3931,8 @@ class LEFT(object):
         #m_N = 0.93
         #element_name = "76Ge"
         n_points = n_dots
-        if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
-            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+        if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass m_min, the sum of neutrino masses m_sum or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
         LECs = { 'Tprime': 1,
                  'Tpipi': 1,
@@ -3995,8 +4145,8 @@ class LEFT(object):
                                 compare_to_mass = False, normalize_to_mass = False, ordering = None):
         #m_N = 0.93
         n_points = n_dots
-        if vary_WC not in ["m_bb", "m_min"] and compare_to_mass:
-            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass or m_bb on the x axis. Setting compare_to_mass = False")
+        if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
+            warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass m_min, the sum of neutrino masses m_sum or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
         #element_name = "76Ge"
         LECs = { 'Tprime': 1,
@@ -4637,7 +4787,7 @@ class SMEFT(object):
         final_WC["LeudH(7)"]  = self.C_LeudH(final_scale)
         final_WC["LLQdH1(7)"] = self.C_LLQdH1(final_scale)
         final_WC["LLQdH2(7)"] = self.C_LLQdH2(final_scale)
-        final_WC["LLQuH(7)"] = self.C_LLQuH(final_scale)
+        final_WC["LLQuH(7)"]  = self.C_LLQuH(final_scale)
         final_WC["LLduD1(7)"] = self.C_LLduD1(final_scale)
         
         if inplace:
@@ -4877,7 +5027,7 @@ class SMEFT(object):
                                show_mbb = show_mbb, 
                                savefig = savefig, file = file))
 
-    def get_limits2(self, hl, unknown_LECs = False, method = None, isotope = "76Ge", onlygroups = False):
+    def get_limits_old(self, hl, unknown_LECs = False, method = None, isotope = "76Ge", onlygroups = False):
         if method == None:
             method = self.method
         #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
@@ -4886,12 +5036,13 @@ class SMEFT(object):
             #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
         elif method not in ["IBM2", "QRPA", "SM"]:
             warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
         else:
             pass
         vev = 246
         #make a backup of WCs
         WC = self.SMEFT_WCs.copy()
-        half_live = hl
+        half_life = hl
         result = {}
         scales = {}
         #scale = {}
@@ -4901,19 +5052,19 @@ class SMEFT(object):
             LEFT_WCs = self.LEFT_matching({WC_name : limit})
             LEFT_model = LEFT(LEFT_WCs, method=method)
             hl = LEFT_model.t_half(isotope=isotope)
-            limit = np.sqrt(hl/half_live)
+            limit = np.sqrt(hl/half_life)
             #if limit != 1:
             result[WC_name] = limit
-            if WC_name == "LH(5)":
-                dimension = 5
-            else:
-                dimension = int(WC_name[-2])
+            #if WC_name == "LH(5)":
+            #    dimension = 5
+            #else:
+            dimension = int(WC_name[-2])
             scale = (1/np.absolute(limit))**(1/(dimension -4))
             scales[WC_name] = scale
         
         return(result, scales)#, scale)
     
-    def get_limits(self, hl, unknown_LECs = False, method = None, isotope = "76Ge"):
+    def get_limits(self, hl, unknown_LECs = False, method = None, isotope = "76Ge", x0 = 1e-18):
         if method == None:
             method = self.method
         #elif method != self.method and method in ["IBM2", "QRPA", "SM"]:
@@ -4921,13 +5072,14 @@ class SMEFT(object):
         #    self.method = method
             #self.NMEs, self.NMEpanda, self.NMEnames = Load_NMEs(method)
         elif method not in ["IBM2", "QRPA", "SM"]:
-            print("Method",method,"is unavailable. Keeping current method",self.method)
+            warnings.warn("Method",method,"is unavailable. Keeping current method",self.method)
+            method = self.method
         else:
             pass
         vev = 246
         #make a backup of WCs
         WC = self.SMEFT_WCs.copy()
-        half_live = hl
+        half_life = hl
         #define function to optimize to fit observed half-life
         #print("... solving a lot of RGEs ...")
         #print("This is going to take some time")
@@ -4935,14 +5087,16 @@ class SMEFT(object):
             #overwrite SMEFT WCs for the calculation and afterwards use backup
             for operator in WC:
                 WC[operator] = 0
-            WC[WC_name] = WC_value[0]
+            WC[WC_name] = WC_value#[0]
             #print(WC_value)
-            LEFT_WCs = self.LEFT_matching(WC=WC)
+            #LEFT_model = self.generate_LEFT_model(WC, method, LEC = None)
+            #LEFT_WCs = self.LEFT_matching(WC=WC)
             #print(LEFT_WCs)
-            LEFT_model = LEFT(LEFT_WCs, method = method, unknown_LECs = unknown_LECs)
+            #LEFT_model = LEFT(LEFT_WCs, method = method, unknown_LECs = unknown_LECs)
             #print(LEFT_WCs)
             #print(SMEFT_WCs)
-            result = LEFT_model.t_half(isotope) - half_live
+            #result = LEFT_model.t_half(isotope) - half_life
+            result = self.t_half(isotope, WC = WC) - half_life
             ##print(result)
             return(result)
 
@@ -4951,8 +5105,8 @@ class SMEFT(object):
         #scale = {}
         for WC_name in self.SMEFT_WCs:
             print(WC_name)
-            limit = np.absolute(optimize.root(t_half_optimize, args=(WC_name, isotope), x0=1e-15).x[0])
-            if limit != 1e-15:
+            limit = np.absolute(optimize.root(t_half_optimize, args=(WC_name, isotope), x0=x0).x[0])
+            if limit != x0:
                 result[WC_name] = limit
                 if WC_name == "LH(5)":
                     dimension = 5

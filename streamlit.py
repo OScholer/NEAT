@@ -261,7 +261,7 @@ if path_option == "Define a model":
                 plot_cols = st.beta_columns(3)
                 plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], key = "plottype"+str(plotidx), help = "Scatter plots vary all the relevant parameters and generate a number of scenarios while line plots calculate the minimum and maximum by running an optimization algorithm. If you want to vary also the LECs you will need to choose scatter plots.")
-                vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx), help = "Choose the Wilson coefficient you want to vary on the x-axis")
+                vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min", "m_sum"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx), help = "Choose the Wilson coefficient you want to vary on the x-axis")
                 show_cosmo = False
                 m_cosmo = 0.15
                 #show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions)
@@ -271,9 +271,14 @@ if path_option == "Define a model":
                         x_min = 10**xlim_cols[0].number_input("Minimum m_min 10^...[eV]", value = -4., key = "xmin"+str(plotidx), help = "This sets the minimum limit on the x axis as 10^a. Preset: a=-4")
                         x_max = 10**xlim_cols[1].number_input("Maximum m_min 10^...[meV]", value = 0., key = "xmax"+str(plotidx), help = "This sets the maximum limit on the x axis as 10^a. Preset: a=0")
                         
+                        
                     elif vary_WC == "m_bb":
                         x_min = 10**xlim_cols[0].number_input("Minimum m_bb 10^...[eV]", value = -4., key = "xmin"+str(plotidx), help = "This sets the maximum limit on the x axis as 10^a. Preset: a=-4")
                         x_max = 10**xlim_cols[1].number_input("Maximum m_bb 10^...[eV]", value = 0., key = "xmax"+str(plotidx), help = "This sets the maximum limit on the x axis as 10^a. Preset: a=0")
+                        
+                    elif vary_WC == "m_sum":
+                        x_min = 10**xlim_cols[0].number_input("Minimum m_sum 10^...[eV]", value = -4., key = "xmin"+str(plotidx), help = "This sets the maximum limit on the x axis as 10^a. Preset: a=-4")
+                        x_max = 10**xlim_cols[1].number_input("Maximum m_sum 10^...[eV]", value = 0., key = "xmax"+str(plotidx), help = "This sets the maximum limit on the x axis as 10^a. Preset: a=0")
                     elif vary_WC[-2] == "6":
                         x_min = 10**xlim_cols[0].number_input("Minimum C_"+vary_WC+" 10^...", value = -11., key = "xmin"+str(plotidx), help = "This sets the maximum limit on the x axis as 10^a. Preset: a=0")
                         x_max = 10**xlim_cols[1].number_input("Maximum C_"+vary_WC+" 10^...", value = -5., key = "xmax"+str(plotidx), help = "This sets the maximum limit on the x axis as 10^a. Preset: a=0")
@@ -330,6 +335,9 @@ if path_option == "Define a model":
                     elif vary_WC == "m_bb":
                         x_min = xlim_cols[0].number_input("Minimum m_bb [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
                         x_max = xlim_cols[1].number_input("Maximum m_bb [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
+                    elif vary_WC == "m_sum":
+                        x_min = xlim_cols[0].number_input("Minimum m_sum [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
+                        x_max = xlim_cols[1].number_input("Maximum m_sum [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
                     elif vary_WC[-2] == "6":
                         x_min = xlim_cols[0].number_input("Minimum C_"+vary_WC+" [1e-9]", value = 0.1, key = "xmin"+str(plotidx))*1e-9
                         x_max = xlim_cols[1].number_input("Maximum C_"+vary_WC+" [1e-9]", value = 1000., key = "xmax"+str(plotidx))*1e-9
@@ -562,7 +570,7 @@ if path_option == "Define a model":
                 plot_cols = st.beta_columns(3)
                 plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], key = "plottype"+str(plotidx))
-                vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx))
+                vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min", "m_sum"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx))
                 show_cosmo = False
                 m_cosmo = 0.15
                 #show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions)
@@ -577,6 +585,9 @@ if path_option == "Define a model":
                     elif vary_WC == "m_bb":
                         x_min = xlim_cols[0].number_input("Minimum m_bb [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
                         x_max = xlim_cols[1].number_input("Maximum m_bb [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
+                    elif vary_WC == "m_sum":
+                        x_min = xlim_cols[0].number_input("Minimum m_sum [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
+                        x_max = xlim_cols[1].number_input("Maximum m_sum [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
                     elif vary_WC[-2] == "6":
                         x_min = xlim_cols[0].number_input("Minimum C_"+vary_WC+" [1e-9]", value = 0.1, key = "xmin"+str(plotidx))*1e-9
                         x_max = xlim_cols[1].number_input("Maximum C_"+vary_WC+" [1e-9]", value = 1000., key = "xmax"+str(plotidx))*1e-9
@@ -606,7 +617,7 @@ if path_option == "Define a model":
                 plot_cols = st.beta_columns(3)
                 plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], key = "plottype"+str(plotidx))
-                vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx))
+                vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min", "m_sum"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx))
                 show_cosmo = False
                 m_cosmo = 0.15
                 if scatter_or_line == "Line":
@@ -620,6 +631,9 @@ if path_option == "Define a model":
                     elif vary_WC == "m_bb":
                         x_min = xlim_cols[0].number_input("Minimum m_bb [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
                         x_max = xlim_cols[1].number_input("Maximum m_bb [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
+                    elif vary_WC == "m_sum":
+                        x_min = xlim_cols[0].number_input("Minimum m_sum [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
+                        x_max = xlim_cols[1].number_input("Maximum m_sum [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
                     elif vary_WC[-2] == "6":
                         x_min = xlim_cols[0].number_input("Minimum C_"+vary_WC+" [1e-9]", value = 0.1, key = "xmin"+str(plotidx))*1e-9
                         x_max = xlim_cols[1].number_input("Maximum C_"+vary_WC+" [1e-9]", value = 1000., key = "xmax"+str(plotidx))*1e-9
@@ -651,7 +665,7 @@ if path_option == "Define a model":
                                                       index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], 
                                                          key = "plottype"+str(plotidx))
-                vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min"], 
+                vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min", "m_sum"], 
                                                                                   np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx))
                 show_cosmo = False
                 m_cosmo = 0.15
@@ -666,6 +680,9 @@ if path_option == "Define a model":
                     elif vary_WC == "m_bb":
                         x_min = xlim_cols[0].number_input("Minimum m_bb [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
                         x_max = xlim_cols[1].number_input("Maximum m_bb [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
+                    elif vary_WC == "m_sum":
+                        x_min = xlim_cols[0].number_input("Minimum m_sum [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
+                        x_max = xlim_cols[1].number_input("Maximum m_sum [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
                     elif vary_WC[-2] == "6":
                         x_min = xlim_cols[0].number_input("Minimum C_"+vary_WC+" [1e-9]", value = 0.1, key = "xmin"+str(plotidx))*1e-9
                         x_max = xlim_cols[1].number_input("Maximum C_"+vary_WC+" [1e-9]", value = 1000., key = "xmax"+str(plotidx))*1e-9
@@ -773,7 +790,7 @@ elif path_option == "Study operator limits":
         onlygroups = st.checkbox("Show only groups?", help = "Instead of showing the limits for all single Wilson coefficients you can choose to summarize those that give the same contributions.")
         for isotope in experiments:
             if experiments[isotope]>0:
-                limit, scales = LEFT_model.get_limits2(experiments[isotope], isotope=isotope, onlygroups = onlygroups)
+                limit, scales = LEFT_model.get_limits(experiments[isotope], isotope=isotope, onlygroups = onlygroups)
                 limits[isotope] = np.array(list(limit.values()))
             percent_complete += 1/(len(experiments))
             #st.write(limit)
@@ -944,7 +961,7 @@ elif path_option == "Study operator limits":
         onlygroups = st.checkbox("Show only groups?", help = "Instead of showing the limits for all single Wilson coefficients you can choose to summarize those that give the same contributions.")
         for isotope in experiments:
             if experiments[isotope]>0:
-                limit, scales = SMEFT_model.get_limits2(experiments[isotope], isotope_name=isotope, onlygroups = onlygroups)
+                limit, scales = SMEFT_model.get_limits(experiments[isotope], isotope_name=isotope, onlygroups = onlygroups)
                 limits[isotope] = np.array(list(limit.values()))
                 #for operator in limit:
                     #if limit[operator] == np.inf:
