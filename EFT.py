@@ -3707,12 +3707,34 @@ class LEFT(object):
                  'nuNN': -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
                }
         
+        
+        if vary_WC == "m_sum":
+            x_min = np.max([x_min, f.m_min_to_m_sum(0)["NO"]])
+            x_max = np.max([x_max, f.m_min_to_m_sum(0)["NO"]])
+            Msum = np.logspace(np.log10(x_min), np.log10(x_max), n_dots)
+            #print(Msum)
+            mspace = Msum.copy()
+            for idx in range(n_dots):
+                mspace[idx] = f.m_sum_to_m_min(Msum[idx])["NO"]
+            #x_min = np.max([f.m_sum_to_m_min(x_min)["NO"], 1e-10])
+            #x_max = np.max([f.m_sum_to_m_min(x_max)["NO"], 1e-10])
+            #Msum = np.logspace(x_min, x_max, n_dots)
+            
+            #print(x_min)
+            #print(x_max)
+        
+        #M = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), n_dots)
+        else:
+            mspace = np.logspace((np.log10(x_min)),(np.log10(x_max)), n_dots)
+        
+        
         if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
             warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass m_min, the sum of neutrino masses m_sum or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
             
         if compare_to_mass:
             M_mbb = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), 100)
+            #M_mbb = np.round(np.linspace(0, len(mspace) - 1, 100)).astype(int)
             NO_min_mbb = np.zeros(100)
             NO_max_mbb = np.zeros(100)
             IO_min_mbb = np.zeros(100)
@@ -3742,25 +3764,6 @@ class LEFT(object):
         fig = plt.figure(figsize=(9, 8))
         points = np.zeros((n_dots,2))
         pointsIO = np.zeros((n_dots,2))
-        if vary_WC == "m_sum":
-            x_min = np.max([x_min, f.m_min_to_m_sum(0)["NO"]])
-            x_max = np.max([x_max, f.m_min_to_m_sum(0)["NO"]])
-            Msum = np.logspace(np.log10(x_min), np.log10(x_max), n_dots)
-            #print(Msum)
-            mspace = Msum.copy()
-            for idx in range(n_dots):
-                mspace[idx] = f.m_sum_to_m_min(Msum[idx])["NO"]
-            #x_min = np.max([f.m_sum_to_m_min(x_min)["NO"], 1e-10])
-            #x_max = np.max([f.m_sum_to_m_min(x_max)["NO"], 1e-10])
-            #Msum = np.logspace(x_min, x_max, n_dots)
-            
-            #print(x_min)
-            #print(x_max)
-        
-        #M = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), n_dots)
-        else:
-            mspace = np.logspace((np.log10(x_min)),(np.log10(x_max)), n_dots)
-        
         
         
         forbidden_LECsNO = []
