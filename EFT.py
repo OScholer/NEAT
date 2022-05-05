@@ -4,221 +4,70 @@
 # In[1]:
 
 import warnings
+
+#numerics
 import numpy as np
+from scipy import optimize
+from scipy import integrate
+import pandas as pd
+
+#plotting
 import matplotlib as mplt
 from matplotlib import pyplot as plt
-import scipy.constants
-from scipy import optimize
-import pandas as pd
 from matplotlib.lines import Line2D
-import functions as functions
-#import seaborn as sns
-f = functions
-import PSFclasses
-from scipy import integrate
 
+#0nubb stuff
+import PSFclasses
 from NMEs import Load_NMEs
 
-pc = scipy.constants.physical_constants
-u_to_GeV = pc["atomic mass constant energy equivalent in MeV"][0]/1000
+#some functions used
+import functions as f
+
+#import constants
+from constants import *
+
+#import scipy.constants
+#import seaborn as sns
 
 
-# In[2]:
-
-
-SMEFT_WCs = {#dim5                    #Wilson Coefficients of SMEFT
-             "LH(5)"      : 0,         #up to dimension 7. We only 
-             #dim7                    #list the operators violating
-             "LH(7)"     : 0,         #lepton number by 2 units.
-             "LHD1(7)"   : 0,
-             "LHD2(7)"   : 0,
-             "LHDe(7)"   : 0,
-             #"LHB(7)"    : 0,
-             "LHW(7)"    : 0,
-             "LLduD1(7)" : 0,
-             #"LLeH(7)"   : 0,
-             "LLQdH1(7)" : 0,
-             "LLQdH2(7)" : 0,
-             "LLQuH(7)" : 0,
-             "LeudH(7)"  : 0, 
-             #dim9
-             #  -6-fermi
-             "ddueue(9)"    : 0,
-             "dQdueL1(9)"   : 0,
-             "dQdueL2(9)"   : 0,
-             "QudueL1(9)"   : 0,
-             "QudueL2(9)"   : 0,
-             "dQQuLL1(9)"   : 0,
-             "dQQuLL2(9)"   : 0,
-             "QuQuLL1(9)"   : 0,
-             "QuQuLL2(9)"   : 0,
-             "dQdQLL1(9)"   : 0,
-             "dQdQLL2(9)"   : 0,
-             #  -other
-             "LLH4W1(9)"    : 0,
-             "deueH2D(9)"   : 0,
-             "dLuLH2D2(9)"  : 0,
-             "dQLeH2D2(9)"  : 0,
-             "dLQeH2D1(9)"  : 0,
-             "deQLH2D(9)"   : 0,
-             "QueLH2D2(9)"  : 0,
-             "QeuLH2D2(9)"  : 0,
-             "QLQLH2D2(9)"  : 0,
-             "QLQLH2D5(9)"  : 0,
-             "QQLLH2D2(9)"  : 0,
-             "eeH4D2(9)"    : 0,
-             "LLH4D23(9)"   : 0,
-             "LLH4D24(9)"   : 0
-             }
-
-
-# In[3]:
-
-
-LEFT_WCs = {#dim3
-            "m_bb"       : 0, 
-            #dim6
-            "SL(6)"      : 0, 
-            "SR(6)"      : 0, 
-            "T(6)"       : 0, 
-            "VL(6)"      : 0, 
-            "VR(6)"      : 0, 
-            #dim7
-            "VL(7)"      : 0,
-            "VR(7)"      : 0, 
-            #dim9
-            "1L(9)"      : 0, 
-            "1R(9)"      : 0, 
-            "1L(9)prime" : 0, 
-            "1R(9)prime" : 0, 
-            "2L(9)"      : 0, 
-            "2R(9)"      : 0, 
-            "2L(9)prime" : 0, 
-            "2R(9)prime" : 0, 
-            "3L(9)"      : 0, 
-            "3R(9)"      : 0, 
-            "3L(9)prime" : 0, 
-            "3R(9)prime" : 0, 
-            "4L(9)"      : 0, 
-            "4R(9)"      : 0, 
-            "5L(9)"      : 0, 
-            "5R(9)"      : 0, 
-            "6(9)"       : 0,
-            "6(9)prime"  : 0,
-            "7(9)"       : 0,
-            "7(9)prime"  : 0,
-            "8(9)"       : 0,
-            "8(9)prime"  : 0,
-            "9(9)"       : 0,
-            "9(9)prime"  : 0}
-
-
-# In[4]:
-
-
-'''
-    
-'''
 #generate element classes to calculate PSF observables which need the electron wave functions
 #elements without NMEs are commented
-m_e = pc["electron mass energy equivalent in MeV"][0]
 
-U238 =  PSFclasses.element(92, 238, 1.144154 + 2*m_e)
-Th232 = PSFclasses.element(90, 232, 0.837879 + 2*m_e)
+U238 =  PSFclasses.element(92, 238, 1.144154 + 2*m_e_MeV)
+Th232 = PSFclasses.element(90, 232, 0.837879 + 2*m_e_MeV)
 #Hg204 = PSFclasses.element(80, 204, 0.419154 + 2*m_e)
-Pt198 = PSFclasses.element(78, 198, 1.049142 + 2*m_e)
+Pt198 = PSFclasses.element(78, 198, 1.049142 + 2*m_e_MeV)
 #Os192 = PSFclasses.element(76, 192, 0.408274 + 2*m_e)
 #W186 =  PSFclasses.element(74, 186, 0.491643 + 2*m_e)
 #Yb176 = PSFclasses.element(70, 176, 1.088730 + 2*m_e)
 #Er170 = PSFclasses.element(68, 170, 0.655586 + 2*m_e)
-Gd160 = PSFclasses.element(64, 160, 1.730530 + 2*m_e)
-Sm154 = PSFclasses.element(62, 154, 1.250810 + 2*m_e)
-Nd150 = PSFclasses.element(60, 150, 3.371357 + 2*m_e)
-Nd148 = PSFclasses.element(60, 148, 1.928286 + 2*m_e)
+Gd160 = PSFclasses.element(64, 160, 1.730530 + 2*m_e_MeV)
+Sm154 = PSFclasses.element(62, 154, 1.250810 + 2*m_e_MeV)
+Nd150 = PSFclasses.element(60, 150, 3.371357 + 2*m_e_MeV)
+Nd148 = PSFclasses.element(60, 148, 1.928286 + 2*m_e_MeV)
 #Nd146 = PSFclasses.element(60, 146, 0.070421 + 2*m_e)
 #Ce142 = PSFclasses.element(58, 142, 1.417175 + 2*m_e)
-Xe136 = PSFclasses.element(54, 136, 2.457984 + 2*m_e)
-Xe134 = PSFclasses.element(54, 134, 0.825751 + 2*m_e)
-Te130 = PSFclasses.element(52, 130, 2.527515 + 2*m_e)
-Te128 = PSFclasses.element(52, 128, 0.866550 + 2*m_e)
-Sn124 = PSFclasses.element(50, 124, 2.291010 + 2*m_e)
+Xe136 = PSFclasses.element(54, 136, 2.457984 + 2*m_e_MeV)
+Xe134 = PSFclasses.element(54, 134, 0.825751 + 2*m_e_MeV)
+Te130 = PSFclasses.element(52, 130, 2.527515 + 2*m_e_MeV)
+Te128 = PSFclasses.element(52, 128, 0.866550 + 2*m_e_MeV)
+Sn124 = PSFclasses.element(50, 124, 2.291010 + 2*m_e_MeV)
 #Sn122 = PSFclasses.element(50, 122, 0.372877 + 2*m_e)
-Cd116 = PSFclasses.element(48, 116, 2.813438 + 2*m_e)
+Cd116 = PSFclasses.element(48, 116, 2.813438 + 2*m_e_MeV)
 #Cd114 = PSFclasses.element(48, 114, 0.542493 + 2*m_e)
-Pd110 = PSFclasses.element(46, 110, 2.017234 + 2*m_e)
+Pd110 = PSFclasses.element(46, 110, 2.017234 + 2*m_e_MeV)
 #Ru104 = PSFclasses.element(44, 104, 1.301297 + 2*m_e)
-Mo100 = PSFclasses.element(42, 100, 3.034342 + 2*m_e)
+Mo100 = PSFclasses.element(42, 100, 3.034342 + 2*m_e_MeV)
 #Mo98 =  PSFclasses.element(42, 98, 0.109935 + 2*m_e)
-Zr96 =  PSFclasses.element(40, 96, 3.348982 + 2*m_e)
+Zr96 =  PSFclasses.element(40, 96, 3.348982 + 2*m_e_MeV)
 #Zr94 =  PSFclasses.element(40, 94, 1.141919 + 2*m_e)
 #Kr86 =  PSFclasses.element(36, 86, 1.257542 + 2*m_e)
-Se82 =  PSFclasses.element(34, 82, 2.996402 + 2*m_e)
+Se82 =  PSFclasses.element(34, 82, 2.996402 + 2*m_e_MeV)
 #Se80 =  PSFclasses.element(34, 80, 0.133874 + 2*m_e)
-Ge76 =  PSFclasses.element(32, 76, 2.039061 + 2*m_e)
+Ge76 =  PSFclasses.element(32, 76, 2.039061 + 2*m_e_MeV)
 #Zn70 =  PSFclasses.element(30, 70, 0.997118 + 2*m_e)
-Ca48 =  PSFclasses.element(20, 48, 4.266970 + 2*m_e)
+Ca48 =  PSFclasses.element(20, 48, 4.266970 + 2*m_e_MeV)
 #Ca46 =  PSFclasses.element(20, 46, 0.988576 + 2*m_e)
-
-
-'''
-    ##########################################################
-
-    Download atomic weights to calculate avrg nucleon mass M_N
-
-    ##########################################################
-'''
-
-
-#Get masses from all known isotopes
-#data = []
-
-#import atomic masses from list
-#print("__________________")
-#print("")
-#print("Importing atomic weights of different isotopes:")
-#for i in range(3352):
-#    data.append(pd.read_csv("Atomic_Weights.txt", header=None, sep="=", skiprows=i*8, nrows=7))
-#summarize all data
-#masses = np.zeros((295, 118))
-
-#iterate over all isotopes and get Z, A, and the mass
-#for i in range(len(data)):
-#    Z = int(data[i][1][0])
-#    A = int(data[i][1][2])
-#    mass = data[i][1][3]
-#    midx = len(mass)
-
-#    #format string to float
-#    for idx in range(len(mass)):
-#        if mass[idx] =="(":
-#            midx=idx
-#            break
-#    mass = float(mass[:midx])
-#
-#    #put mass in mass matrix
-#    masses[A-1,Z-1] = mass
-#
-##average nucleon mass
-#M_N = {#"46Ca" : masses[45, 19] / 46*u_to_GeV, 
-#       #"48Ca" : masses[47, 19] / 48*u_to_GeV, 
-#       #"70Zn" : masses[69, 29] / 70*u_to_GeV, 
-#       "76Ge" : masses[75, 31] / 76*u_to_GeV, 
-#       #"80Se" : masses[79, 33] / 80*u_to_GeV, 
-#       "82Se" : masses[81, 33] / 82*u_to_GeV,
-#       #"86Kr" : masses[85, 35] / 86*u_to_GeV,
-#       #"94Zr" : masses[93, 39] / 94*u_to_GeV,
-#       "96Zr" : masses[95, 39] / 96*u_to_GeV,
-#       #"98Mo" : masses[97, 41] / 98*u_to_GeV,
-#       "100Mo" : masses[99, 41] / 100*u_to_GeV, 
-#       #"104Ru" : masses[103, 43] / 104*u_to_GeV, 
-#       "110Pd" : masses[109, 45] / 110*u_to_GeV,
-#       #"114Cd" : masses[113, 47] / 114*u_to_GeV,
-#       "116Cd" : masses[115, 47] / 116*u_to_GeV,
-#       #"122Sn" : masses[121, 49] / 122*u_to_GeV,
-#       "124Sn" : masses[123, 49] / 124*u_to_GeV,
-#       "128Te" : masses[127, 51] / 128*u_to_GeV,
-#       "130Te" : masses[129, 51] / 130*u_to_GeV,  
-#       "136Xe" : masses[135, 53] / 136*u_to_GeV}
 
 
 #list of element classes
@@ -266,17 +115,8 @@ element_names = list(elements.keys())
 #GENERATE THE RUNNING MATRIX FOR LEFT
 
 def alpha_s(mu, mu_0=91, alpha_0=0.12):
-    m_t = 175
-    m_b = 4.8
-    m_c = 1.4
-    m_s = 0#0.96
-    m_u = 0#0.022
-    m_d = 0#0.047
-
     masses = np.array([m_u, m_d, m_s, m_c, m_b, m_t])
-
     f = np.searchsorted(2*masses, mu)
-
     return (alpha_0/(1 + (33 - 2*f)*alpha_0/(6*np.pi)*np.log(mu/mu_0)))
 
 
@@ -289,14 +129,12 @@ def RGEC6_S(ln_mu, C):
     mu = np.exp(ln_mu)
     n_c = 3
     C_F = (n_c**2 - 1) / (2*n_c)
-
     return (-6*C_F * alpha_s(mu)/(4*np.pi) * C)
 
 def RGEC6_T(ln_mu, C):
     mu = np.exp(ln_mu)
     n_c = 3
     C_F = (n_c**2 - 1) / (2*n_c)
-
     return (2*C_F * alpha_s(mu)/(4*np.pi) * C)
 
 def RGEC9_1(ln_mu, C):
@@ -329,7 +167,7 @@ def RGEC9_67_89(ln_mu, C):
 
 
 
-def run_LEFT(WC, initial_scale=80, final_scale = 2):
+def run_LEFT(WC, initial_scale=m_W, final_scale = lambda_chi):
 ######################################################################################
 #
 #Define RGEs as differential equations and solve them numerically for the given scales
@@ -338,9 +176,6 @@ def run_LEFT(WC, initial_scale=80, final_scale = 2):
 
     #chi_scale = low_scale
     #print("Running operators from m_W to chiPT")
-
-    #m_W = 80#GeV
-    m_t = 175
 
 
     C6_SL_sol = integrate.solve_ivp(RGEC6_S, [np.log(initial_scale), np.log(final_scale)], [WC["SL(6)"]])
@@ -423,13 +258,10 @@ for operator in LEFT_WCs:
         LEFT_WCs[operators] = 0
 matrix = matrix.T
 
-
-# In[11]:
-
 #####################################################################################################
 #                                                                                                   #
 #                                                                                                   #
-#                                            LEFT                                              #
+#                                            LEFT                                                   #
 #                                                                                                   #
 #                                                                                                   #
 #####################################################################################################
@@ -448,78 +280,84 @@ class LEFT(object):
         
         # physical constands
         
-        self.m_N = 0.93
-        self.m_e = pc["electron mass energy equivalent in MeV"][0] * 1e-3
-        self.m_e_MEV = pc["electron mass energy equivalent in MeV"][0]
-        self.vev = 246
+        self.m_N = m_N
+        self.m_e = m_e
+        self.m_e_MEV = m_e_MeV
+        self.vev = vev
         
         #store wilson coefficients
         #there are two possible choices of a LEFT WC basis
         #the C-basis is the preferred one and all calculations are done within this basis
         #however, also the epsilon-basis can be chosen and is translated to the C-basis internally
-        self.CWC = {#dim3
-              "m_bb":0, 
-              #dim6
-              "SL(6)": 0, "SR(6)": 0, 
-              "T(6)":0, 
-              "VL(6)":0, "VR(6)":0, 
-              #dim7
-              "VL(7)":0, "VR(7)":0, 
-              #dim9
-              "1L(9)":0, "1R(9)":0, 
-              "1L(9)prime":0, "1R(9)prime":0, 
-              "2L(9)":0, "2R(9)":0, 
-              "2L(9)prime":0, "2R(9)prime":0, 
-              "3L(9)":0, "3R(9)":0, 
-              "3L(9)prime":0, "3R(9)prime":0, 
-              "4L(9)":0, "4R(9)":0, 
-              "5L(9)":0, "5R(9)":0, 
-              "6(9)":0,
-              "6(9)prime":0,
-              "7(9)":0,
-              "7(9)prime":0,
-              "8(9)":0,
-              "8(9)prime":0,
-              "9(9)":0,
-              "9(9)prime":0}
+        #self.CWC = {#dim3
+        #      "m_bb":0, 
+        #      #dim6
+        #      "SL(6)": 0, "SR(6)": 0, 
+        #      "T(6)":0, 
+        #      "VL(6)":0, "VR(6)":0, 
+        #      #dim7
+        #      "VL(7)":0, "VR(7)":0, 
+        #      #dim9
+        #      "1L(9)":0, "1R(9)":0, 
+        #      "1L(9)prime":0, "1R(9)prime":0, 
+        #      "2L(9)":0, "2R(9)":0, 
+        #      "2L(9)prime":0, "2R(9)prime":0, 
+        #      "3L(9)":0, "3R(9)":0, 
+        #      "3L(9)prime":0, "3R(9)prime":0, 
+        #      "4L(9)":0, "4R(9)":0, 
+        #      "5L(9)":0, "5R(9)":0, 
+        #      "6(9)":0,
+        #      "6(9)prime":0,
+        #      "7(9)":0,
+        #      "7(9)prime":0,
+        #      "8(9)":0,
+        #      "8(9)prime":0,
+        #      "9(9)":0,
+        #      "9(9)prime":0}
         
-        self.EpsilonWC = {#dim3
-                          "m_bb":0, 
-                          #dim6
-                          "V+AV+A": 0, "V+AV-A": 0, 
-                          "TRTR":0, 
-                          "S+PS+P":0, "S+PS-P":0,
-                          #dim7
-                          "VL(7)":0, "VR(7)":0, #copied from C basis
-                          #dim9
-                          "1LLL":0, "1LLR":0,
-                          "1RRL":0, "1RRR":0,
-                          "1RLL":0, "1RLR":0,
-                          "2LLL":0, "2LLR":0,
-                          "2RRL":0, "2RRR":0,
-                          "3LLL":0, "3LLR":0,
-                          "3RRL":0, "3RRR":0,
-                          "3RLL":0, "3RLR":0,
-                          "4LLR":0, "4LRR":0,
-                          "4RRR":0, "4RLR":0,
-                          "5LLR":0, "5LRR":0,
-                          "5RRR":0, "5RLR":0,
-                          #redundant operators
-                          "1LRL":0, "1LRR":0, 
-                          "3LRL":0, "3LRR":0,
-                          "4LLL":0, "4LRL":0,
-                          "4RRL":0, "4RLL":0,
-                          "TLTL":0,
-                          "5LLL":0, "5LRL":0,
-                          "5RRL":0, "5RLL":0,
-                          #vanishing operators
-                          "2LRL":0, "2LRR":0, 
-                          "2RLL":0, "2RLR":0, 
-                          "TRTL":0, "TLTR":0, 
-                          #operators not contributing directly
-                          "V-AV+A": 0, "V-AV-A": 0, 
-                          "S-PS+P":0, "S-PS-P":0,
-                         }
+        self.CWC = LEFT_WCs.copy()
+        
+        self.EpsilonWC = LEFT_WCs_epsilon.copy()
+        
+        #self.EpsilonWC = {#dim3
+        #                  "m_bb":0, 
+        #                  #dim6
+        #                  "V+AV+A": 0, "V+AV-A": 0, 
+        #                  "TRTR":0, 
+        #                  "S+PS+P":0, "S+PS-P":0,
+        #                  #dim7
+        #                  "VL(7)":0, "VR(7)":0, #copied from C basis
+        #                  #dim9
+        #                  "1LLL":0, "1LLR":0,
+        #                  "1RRL":0, "1RRR":0,
+        #                  "1RLL":0, "1RLR":0,
+        #                  "2LLL":0, "2LLR":0,
+        #                  "2RRL":0, "2RRR":0,
+        #                  "3LLL":0, "3LLR":0,
+        #                  "3RRL":0, "3RRR":0,
+        #                  "3RLL":0, "3RLR":0,
+        #                  "4LLR":0, "4LRR":0,
+        #                  "4RRR":0, "4RLR":0,
+        #                  "5LLR":0, "5LRR":0,
+        #                  "5RRR":0, "5RLR":0,
+        #                  #redundant operators
+        #                  "1LRL":0, "1LRR":0, 
+        #                  "3LRL":0, "3LRR":0,
+        #                  "4LLL":0, "4LRL":0,
+        #                  "4RRL":0, "4RLL":0,
+        #                  "TLTL":0,
+        #                  "5LLL":0, "5LRL":0,
+        #                  "5RRL":0, "5RLL":0,
+        #                  #vanishing operators
+        #                  "2LRL":0, "2LRR":0, 
+        #                  "2RLL":0, "2RLR":0, 
+        #                  "TRTL":0, "TLTR":0, 
+        #                  #operators not contributing directly
+        #                  "V-AV+A": 0, "V-AV-A": 0, 
+        #                  "S-PS+P":0, "S-PS-P":0,
+        #                 }
+        
+        
         #get the WCs right
         if basis == "C" or basis == "c":
             for operator in WC:
@@ -560,16 +398,18 @@ class LEFT(object):
         #Store the Low Energy Constants (LECs) required
         self.unknown_LECs = unknown_LECs
         if unknown_LECs == True:
-            self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
-                       "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
-                       # all the below are expected to be order 1 in absolute magnitude
-                       "Tprime":1, "Tpipi":1, "1piN":1, "6piN":1, "7piN":1, "8piN":1, "9piN":1, "VLpiN":1, "TpiN":1, 
-                       "1NN":1, "6NN":1, "7NN":1, "VLNN":1, "TNN": 1, "VLE":1, "VLme":1, "VRE":1, "VRme":1, 
-                       # all the below are expected to be order (4pi)**2 in absolute magnitude
-                       "2NN":(4*np.pi)**2, "3NN":(4*np.pi)**2, "4NN":(4*np.pi)**2, "5NN":(4*np.pi)**2, 
-                       # expected to be 1/F_pipi**2 pion decay constant
-                       "nuNN": -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
-                      }
+            #self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
+            #           "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
+            #           # all the below are expected to be order 1 in absolute magnitude
+            #           "Tprime":1, "Tpipi":1, "1piN":1, "6piN":1, "7piN":1, "8piN":1, "9piN":1, "VLpiN":1, "TpiN":1, 
+            #           "1NN":1, "6NN":1, "7NN":1, "VLNN":1, "TNN": 1, "VLE":1, "VLme":1, "VRE":1, "VRme":1, 
+            #           # all the below are expected to be order (4pi)**2 in absolute magnitude
+            #           "2NN":(4*np.pi)**2, "3NN":(4*np.pi)**2, "4NN":(4*np.pi)**2, "5NN":(4*np.pi)**2, 
+            #           # expected to be 1/F_pipi**2 pion decay constant
+            #           "nuNN": -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
+            #          }
+            
+            self.LEC = LECs.copy()
             
             self.LEC["VpiN"] = self.LEC["6piN"] + self.LEC["8piN"]
             self.LEC["tildeVpiN"] = self.LEC["7piN"] + self.LEC["9piN"]
@@ -578,8 +418,8 @@ class LEFT(object):
             self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
                        "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
                        # all the below are expected to be order 1 in absolute magnitude
-                       "Tprime":1, "Tpipi":0, "1piN":1, "6piN":0, "7piN":0, "8piN":0, "9piN":0, "VLpiN":0, "TpiN":0, 
-                       "1NN":1, "6NN":1, "7NN":1, "VLNN":0, "TNN": 0, "VLE":0, "VLme":0, "VRE":0, "VRme":0, 
+                       "Tprime":0, "Tpipi":0, "1piN":0, "6piN":0, "7piN":0, "8piN":0, "9piN":0, "VLpiN":0, "TpiN":0, 
+                       "1NN":0, "6NN":1, "7NN":1, "VLNN":0, "TNN": 0, "VLE":0, "VLme":0, "VRE":0, "VRme":0, 
                        # all the below are expected to be order (4pi)**2 in absolute magnitude
                        "2NN":0, "3NN":0, "4NN":0, "5NN":0, 
                        # expected to be 1/F_pipi**2 pion decay constant
@@ -588,49 +428,6 @@ class LEFT(object):
             self.LEC["VpiN"] = 1#LEC["6piN"] + LEC["8piN"]
             self.LEC["tildeVpiN"] = 1#LEC["7piN"] + LEC["9piN"]
         
-        
-        
-        #generate element classes to calculate PSF observables
-        #these contain the electron wavefunctions etc.
-        #elements without NMEs are commented out to speed up the code
-        #note that the Q-values here are in MeV!!!
-        #m_e = pc["electron mass energy equivalent in MeV"][0]
-
-        #U238 =  PSFclasses.element(92, 238, 1.144154 + 2*m_e)
-        #Th232 = PSFclasses.element(90, 232, 0.837879 + 2*m_e)
-        #Hg204 = PSFclasses.element(80, 204, 0.419154 + 2*m_e)
-        #Pt198 = PSFclasses.element(78, 198, 1.049142 + 2*m_e)
-        #Os192 = PSFclasses.element(76, 192, 0.408274 + 2*m_e)
-        #W186 =  PSFclasses.element(74, 186, 0.491643 + 2*m_e)
-        #Yb176 = PSFclasses.element(70, 176, 1.088730 + 2*m_e)
-        #Er170 = PSFclasses.element(68, 170, 0.655586 + 2*m_e)
-        #Gd160 = PSFclasses.element(64, 160, 1.730530 + 2*m_e)
-        #Sm154 = PSFclasses.element(62, 154, 1.250810 + 2*m_e)
-        #Nd150 = PSFclasses.element(60, 150, 3.371357 + 2*m_e)
-        #Nd148 = PSFclasses.element(60, 148, 1.928286 + 2*m_e)
-        #Nd146 = PSFclasses.element(60, 146, 0.070421 + 2*m_e)
-        #Ce142 = PSFclasses.element(58, 142, 1.417175 + 2*m_e)
-        #Xe136 = PSFclasses.element(54, 136, 2.457984 + 2*m_e)
-        #Xe134 = PSFclasses.element(54, 134, 0.825751 + 2*m_e)
-        #Te130 = PSFclasses.element(52, 130, 2.527515 + 2*m_e)
-        #Te128 = PSFclasses.element(52, 128, 0.866550 + 2*m_e)
-        #Sn124 = PSFclasses.element(50, 124, 2.291010 + 2*m_e)
-        #Sn122 = PSFclasses.element(50, 122, 0.372877 + 2*m_e)
-        #Cd116 = PSFclasses.element(48, 116, 2.813438 + 2*m_e)
-        #Cd114 = PSFclasses.element(48, 114, 0.542493 + 2*m_e)
-        #Pd110 = PSFclasses.element(46, 110, 2.017234 + 2*m_e)
-        #Ru104 = PSFclasses.element(44, 104, 1.301297 + 2*m_e)
-        #Mo100 = PSFclasses.element(42, 100, 3.034342 + 2*m_e)
-        #Mo98 =  PSFclasses.element(42, 98, 0.109935 + 2*m_e)
-        #Zr96 =  PSFclasses.element(40, 96, 3.348982 + 2*m_e)
-        #Zr94 =  PSFclasses.element(40, 94, 1.141919 + 2*m_e)
-        #Kr86 =  PSFclasses.element(36, 86, 1.257542 + 2*m_e)
-        #Se82 =  PSFclasses.element(34, 82, 2.996402 + 2*m_e)
-        #Se80 =  PSFclasses.element(34, 80, 0.133874 + 2*m_e)
-        #Ge76 =  PSFclasses.element(32, 76, 2.039061 + 2*m_e)
-        #Zn70 =  PSFclasses.element(30, 70, 0.997118 + 2*m_e)
-        #Ca48 =  PSFclasses.element(20, 48, 4.266970 + 2*m_e)
-        #Ca46 =  PSFclasses.element(20, 46, 0.988576 + 2*m_e)
 
         #list of element classes
         self.elements = elements
@@ -646,16 +443,18 @@ class LEFT(object):
     def set_LECs(self, unknown_LECs):
         self.unknown_LECs = unknown_LECs
         if unknown_LECs == True:
-            self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
-                       "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
-                       # all the below are expected to be order 1 in absolute magnitude
-                       "Tprime":1, "Tpipi":1, "1piN":1, "6piN":1, "7piN":1, "8piN":1, "9piN":1, "VLpiN":1, "TpiN":1, 
-                       "1NN":1, "6NN":1, "7NN":1, "VLNN":1, "TNN": 1, "VLE":1, "VLme":1, "VRE":1, "VRme":1, 
-                       # all the below are expected to be order (4pi)**2 in absolute magnitude
-                       "2NN":(4*np.pi)**2, "3NN":(4*np.pi)**2, "4NN":(4*np.pi)**2, "5NN":(4*np.pi)**2, 
-                       # expected to be 1/F_pipi**2 pion decay constant
-                       "nuNN": -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
-                      }
+            #self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
+            #           "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
+            #           # all the below are expected to be order 1 in absolute magnitude
+            #           "Tprime":1, "Tpipi":1, "1piN":1, "6piN":1, "7piN":1, "8piN":1, "9piN":1, "VLpiN":1, "TpiN":1, 
+            #           "1NN":1, "6NN":1, "7NN":1, "VLNN":1, "TNN": 1, "VLE":1, "VLme":1, "VRE":1, "VRme":1, 
+            #           # all the below are expected to be order (4pi)**2 in absolute magnitude
+            #           "2NN":(4*np.pi)**2, "3NN":(4*np.pi)**2, "4NN":(4*np.pi)**2, "5NN":(4*np.pi)**2, 
+            #           # expected to be 1/F_pipi**2 pion decay constant
+            #           "nuNN": -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
+            #          }
+
+            self.LEC = LECs.copy()
             
             self.LEC["VpiN"] = self.LEC["6piN"] + self.LEC["8piN"]
             self.LEC["tildeVpiN"] = self.LEC["7piN"] + self.LEC["9piN"]
@@ -664,8 +463,8 @@ class LEFT(object):
             self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
                        "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
                        # all the below are expected to be order 1 in absolute magnitude
-                       "Tprime":1, "Tpipi":0, "1piN":1, "6piN":0, "7piN":0, "8piN":0, "9piN":0, "VLpiN":0, "TpiN":0, 
-                       "1NN":1, "6NN":1, "7NN":1, "VLNN":0, "TNN": 0, "VLE":0, "VLme":0, "VRE":0, "VRme":0, 
+                       "Tprime":0, "Tpipi":0, "1piN":0, "6piN":0, "7piN":0, "8piN":0, "9piN":0, "VLpiN":0, "TpiN":0, 
+                       "1NN":0, "6NN":1, "7NN":1, "VLNN":0, "TNN": 0, "VLE":0, "VLme":0, "VRE":0, "VRme":0, 
                        # all the below are expected to be order (4pi)**2 in absolute magnitude
                        "2NN":0, "3NN":0, "4NN":0, "5NN":0, 
                        # expected to be 1/F_pipi**2 pion decay constant
@@ -679,12 +478,6 @@ class LEFT(object):
     #should be made continuous
     #right now it has steps at 2*m_quarks
     def alpha_s(self, mu, mu_0=91, alpha_0=0.12):
-        m_t = 175
-        m_b = 4.8
-        m_c = 1.4
-        m_s = 0#0.96
-        m_u = 0#0.022
-        m_d = 0#0.047
 
         masses = np.array([m_u, m_d, m_s, m_c, m_b, m_t])
 
@@ -920,7 +713,7 @@ class LEFT(object):
         return(new_WC)
         
         
-    def _run(self, WC = None, initial_scale=80, final_scale = 2):
+    def _run(self, WC = None, initial_scale = m_W, final_scale = lambda_chi):
     ######################################################################################
     #
     #Define RGEs as differential equations and solve them numerically for the given scales
@@ -932,9 +725,6 @@ class LEFT(object):
             self.WC = WC
         #chi_scale = low_scale
         #print("Running operators from m_W to chiPT")
-
-        #m_W = 80#GeV
-        m_t = 175
         
         
         C6_SL_sol = integrate.solve_ivp(self.RGEC6_S, [np.log(initial_scale), np.log(final_scale)], [self.WC["SL(6)"]])
@@ -1042,19 +832,14 @@ class LEFT(object):
 
         if WC == None:
             WC = self.WC.copy()
-        #scale all operators to order something around order 1
-        
-        #for operator in WC:
-        #    WC[operator] *= 1e+6
+            
         #Calculates the half-live for a given element and WCs
         amp, M = self.amplitudes(isotope, WC, method)
         element = self.elements[isotope]
         
         g_A=self.LEC["A"]
         
-        #G = PSFs[element]
         G = self.to_G(isotope)
-        #m_e = pc["electron mass energy equivalent in MeV"][0]
 
         #Some PSFs need a rescaling due to different definitions in DOIs paper and 1806...
         g_06_rescaling = self.m_e_MEV*element.R/2
@@ -1072,9 +857,6 @@ class LEFT(object):
                           - 2 *  G["03"]*((amp["nu"]+amp["R"])*np.conj(amp["E"]) + 2*amp["me"]*np.conj(amp["E"])).real
                           + G["09"] * np.absolute(amp["M"])**2
                           + G["06"] * ((amp["nu"]-amp["R"])*np.conj(amp["M"])).real)
-        #for operator in WC:
-        #    WC[operator] *= 1e-6
-        #return(1e+12*1/inverse_result)
         return(1/inverse_result)
     
     def amplitudes(self, isotope, WC = None, method=None):
@@ -1116,11 +898,11 @@ class LEFT(object):
 
         #Constants: all in GeV
         #vev = 246
-        V_ud = 0.97417
+        #V_ud = 0.97417
         #m_e = 5.10998e-4
         g_A=LEC["A"]
         g_V=1
-        m_pi = 0.13957
+        #m_pi = 0.13957
         #m_N = 0.93
 
 
@@ -1300,6 +1082,7 @@ class LEFT(object):
     ####################################################################################################
     
     def spectrum(self, Ebar, isotope = "76Ge", WC = None, method=None):#, amp=None):
+        #calculates the single electron spectrum
         if WC == None:
             WC = self.WC.copy()
         #set the method and import NMEs if necessary
@@ -1318,7 +1101,6 @@ class LEFT(object):
             pass
             
         #method = self.method
-        #calculates the single electron spectrum
         
         #get element class
         element = self.elements[isotope]
@@ -1354,6 +1136,7 @@ class LEFT(object):
         return(result)
 
     def angular_corr(self, Ebar, isotope = "76Ge", WC = None, method=None):#, amp = None):
+        #calculates the angular correlation coefficient for a given normalized energy Ebar
         if WC == None:
             WC = self.WC.copy()
         #set the method and import NMEs if necessary
@@ -1373,7 +1156,6 @@ class LEFT(object):
             pass
             
         #method = self.method
-        #calculates the angular correlation coefficient for a given normalized energy Ebar
         
         #get element class
         element = self.elements[isotope]
@@ -1424,8 +1206,32 @@ class LEFT(object):
         3. PSF observables
         
         ####################################################################################################
+        
     '''
-    def half_lives(self, WC = None, method = None):#, unknown_LECs = None):
+    
+    def _vary_LECs(self, inplace = False): #this function varies the unknown LECs within the appropriate range
+        LECs = {}
+        for LEC in LECs_unknown:
+            if LEC == "nuNN":
+                random_LEC = (np.random.rand()+0.5)*LECs_unknown[LEC]
+                LECs[LEC] = random_LEC
+            else:
+                #random_LEC = variation_range*2*(np.random.rand()-0.5)*LECs[LEC]
+                random_LEC = (np.random.choice([1,-1])
+                              *((np.sqrt(10)-1/np.sqrt(10))
+                                *np.random.rand()+1/np.sqrt(10))*LECs_unknown[LEC])
+            LECs[LEC] = random_LEC
+            
+        #set LECs that depend on others
+        LECs["VpiN"] = LECs["6piN"] + LECs["8piN"]
+        LECs["tildeVpiN"] = LECs["7piN"] + LECs["9piN"]
+        if inplace:
+            for LEC in LECs:
+                self.LEC[LEC] = LECs[LEC]
+        else:
+            return(LECs)
+    
+    def half_lives(self, WC = None, method = None, vary_LECs = False, n_points = 1000):#, unknown_LECs = None):
         if WC == None:
             WC = self.WC.copy()
     #returns a pandas.DataFrame with all half-lives of the available isotopes for the considered NME method
@@ -1449,19 +1255,45 @@ class LEFT(object):
             method = self.method
             NMEs = self.NMEs
             pass
-
-        hl = pd.DataFrame([], [r"$y$"])
-        for isotope in list(NMEs.keys()):
-            element = self.elements[isotope]
-            hl[isotope] = [self.t_half(isotope, WC, method)]
+        
+        
+        #generate DataFrame to store results
+        hl = pd.DataFrame([])#, [r"$y$"])
+        
+        
+        #either vary over the unknown LECs or return half_lives for current LECs
+        if vary_LECs:
+            #generate a backup of the LECs
+            LEC_backup = self.LEC.copy()
+            hlarrays = {}
+            for isotope in list(NMEs.keys()):
+                hlarrays[isotope] = np.zeros(n_points)
+                
+            
+            for idx in range(n_points):
+                #for each step vary LECs
+                self._vary_LECs(inplace = True)
+                
+                #calculate half_lives in each isotope for given LECs
+                for isotope in list(NMEs.keys()):
+                    hlarrays[isotope][idx] = self.t_half(isotope, WC, method)
+                    
+            #fill pandas DataFrame
+            for isotope in list(NMEs.keys()):
+                hl[isotope] = hlarrays[isotope]
+            self.LEC = LEC_backup.copy()
+            
+        #fill pandas DataFrame for fixed LECs
+        else:
+            for isotope in list(NMEs.keys()):
+                hl[isotope] = [self.t_half(isotope, WC, method)]
         
         return(hl)
     
     
     def ratios(self, reference_isotope = "76Ge", normalized = True, 
-               WC = None, method=None, vary = False, n_points = 100):
+               WC = None, method=None, vary_LECs = False, n_points = 100):
     #returns the half-live ratios compared to the standard mass mechanism based on the chosen reference isotope
-    #can optionally also generate a plot of the ratios and save them as "ratios_"+self.name+".png"
         if WC == None:
             WC = self.WC.copy()
         
@@ -1491,148 +1323,50 @@ class LEFT(object):
         for operator in WC_mbb:
             WC_mbb[operator] = 0
         WC_mbb["m_bb"] = 1e-9#m_bb * 1e-9
-
-        #store ratios in a pd.DataFrame
-        self.ratio_values = pd.DataFrame()
-
-        #Generate a column for each isotope
-        for isotope in NMEs.keys():
-            self.ratio_values[isotope] = []
-
-        #Generate a column that contains the operator names -> set to index later
-        self.ratio_values["Model"] = [self.name]
-        self.ratio_values.set_index("Model", inplace = True)
         
-        if vary:
-            self.ratio_values_varied = {}
-            for isotope in NMEs.keys():
-                self.ratio_values_varied[isotope] = []
-
-        #generate a list to store labels in, 1st label has to be empty. It corresponds to the axvline
-        labels = [""]
-
-        #iterate over all isotopes
-        for isotope in NMEs.keys():#["76Ge", "82Se" , "130Te", "136Xe"]:
-
-            ratio_list = []
-
-            #set the color
-            c = "b"
+        if normalized:
+            seed = np.random.randint(0, 2**31)
+            np.random.seed(seed)
+            half_lives      = self.half_lives(vary_LECs = vary_LECs,
+                                              n_points = n_points)
+            np.random.seed(seed)
+            half_lives_mass = self.half_lives(vary_LECs = vary_LECs,
+                                              n_points = n_points,
+                                              WC = {"m_bb" : 1})
+            ratios_model = half_lives.divide(half_lives[reference_isotope], axis = 0)
+            ratios_mass  = half_lives.divide(half_lives[reference_isotope], axis = 0)
             
-            #set the marker
-            m = "x"
-
-            #Calculate Rates for Current isotope and the reference isotope 76Ge
-            #This could be done more efficiently by storing the GE amplitudes 
-            #one loop earlier, but I was too lazy and including the amps in the
-            #t_half function is cleaner.
-
-            #Store half lives for light nu exchange model
-            t_half_m_bb = self.t_half(isotope, WC_mbb, method = method)
-            t_half_m_bb_Ge = self.t_half(reference_isotope, WC_mbb, method = method)
-
-            #calculate half lives for current model
-            t_half_model = self.t_half(isotope, WC, method = method)
-            t_half_model_Ge = self.t_half(reference_isotope, WC, method = method)
-
-            if normalized:
-                #take ratio normalized to the standard mass mechanism
-                ratio = ((t_half_model/t_half_model_Ge) / (t_half_m_bb/t_half_m_bb_Ge))
-            else:
-                ratio = t_half_model/t_half_model_Ge
-
-
-
-            self.ratio_values[isotope] = [ratio]
-            
-            if vary:
-                #define unknown LECs to be varied over
-                LECs = {'Tprime': 1,
-                         'Tpipi': 1,
-                         '1piN': 1,
-                         '6piN': 1,
-                         '7piN': 1,
-                         '8piN': 1,
-                         '9piN': 1,
-                         'VLpiN': 1,
-                         'TpiN': 1,
-                         '1NN': 1,
-                         '6NN': 1,
-                         '7NN': 1,
-                         'VLNN': 1,
-                         'TNN': 1,
-                         'VLE': 1,
-                         'VLme': 1,
-                         'VRE': 1,
-                         'VRme': 1,
-                         '2NN': 157.91367041742973,  #(4pi)^2
-                         '3NN': 157.91367041742973,  #(4pi)^2
-                         '4NN': 157.91367041742973,  #(4pi)^2
-                         '5NN': 157.91367041742973,  #(4pi)^2
-                         'nuNN': -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
-                       }
-                LEC_backup = self.LEC.copy()
-                
-                varied_ratios = pd.DataFrame()
-                for idx in range(n_points):
-                    for LEC in LECs:
-                        if LEC == "nuNN":
-                            random_LEC = (np.random.rand()+0.5)*LECs[LEC]
-                            self.LEC[LEC] = random_LEC
-                        else:
-                            #random_LEC = variation_range*2*(np.random.rand()-0.5)*LECs[LEC]
-                            random_LEC = (np.random.choice([1,-1])
-                                          *((np.sqrt(10)-1/np.sqrt(10))
-                                            *np.random.rand()+1/np.sqrt(10))*LECs[LEC])
-                        self.LEC[LEC] = random_LEC
-                    #set LECs that depend on others
-                    self.LEC["VpiN"] = self.LEC["6piN"] + self.LEC["8piN"]
-                    self.LEC["tildeVpiN"] = self.LEC["7piN"] + self.LEC["9piN"]
-                    
-                    #Store half lives for light nu exchange model
-                    t_half_m_bb = self.t_half(isotope, WC_mbb)
-                    t_half_m_bb_Ge = self.t_half(reference_isotope, WC_mbb)
-
-                    #calculate half lives for current model
-                    t_half_model = self.t_half(isotope, self.WC)
-                    t_half_model_Ge = self.t_half(reference_isotope, self.WC)
-
-                    if normalized:
-                        #take ratio normalized to the standard mass mechanism
-                        ratio = ((t_half_model/t_half_model_Ge) / (t_half_m_bb/t_half_m_bb_Ge))
-                    else:
-                        ratio = t_half_model/t_half_model_Ge
-                        
-                    
-                    self.ratio_values_varied[isotope].append(ratio)
-                    
-                #restore standard LECs
-                self.LEC = LEC_backup.copy()
-                
-        #if vary:
-        #    return(self.ratio_values, varied_ratios)
-        if vary:
-            self.ratio_values_varied = pd.DataFrame(self.ratio_values_varied)
-            return(self.ratio_values, self.ratio_values_varied)
+            ratios = ratios_model.divide(ratios_mass, axis = 0)
         else:
-            return(self.ratio_values)
+            half_lives = self.half_lives(vary_LECs = vary_LECs, 
+                                         n_points = n_points)
+            ratios = half_lives.divide(half_lives[reference_isotope], axis = 0)
+        return(ratios)
         
     def plot_ratios(self, reference_isotope = "76Ge", normalized = True, 
-                    WC = None, method=None, vary = False, n_points = 100, 
+                    WC = None, method=None, vary_LECs = False, n_points = 100, 
                     color = "b", addgrid = True, savefig = False, file = "ratios.png"):
         #set the color
         c = color
 
         #set the marker
         m = "x"
-        if vary == True:
-            ratios, ratios_varied = self.ratios(reference_isotope = reference_isotope, 
-                                                normalized = normalized, WC = WC, method = method, 
-                                                vary = vary, n_points = n_points)
+        if vary_LECs:
+            ratios = self.ratios(reference_isotope = reference_isotope, 
+                                 normalized = normalized, 
+                                 WC = WC, method = method, 
+                                 vary_LECs = False)
+            
+            ratios_varied = self.ratios(reference_isotope = reference_isotope, 
+                                        normalized = normalized, 
+                                        WC = WC, method = method, 
+                                        vary_LECs = vary_LECs, 
+                                        n_points = n_points)
         else:
             ratios = self.ratios(reference_isotope = reference_isotope, 
-                                 normalized = normalized, WC = WC, method = method, 
-                                 vary = vary, n_points = n_points)
+                                 normalized = normalized, 
+                                 WC = WC, 
+                                 method = method)
         
         fig = plt.figure(figsize=(6.4*1.85, 4.8*2))
         
@@ -1645,7 +1379,7 @@ class LEFT(object):
                 
             plt.scatter(np.log10(ratios[isotope]), isotope_plot, 
                 marker = m, color = c, s=150)
-            if vary:
+            if vary_LECs:
                 plt.scatter(np.log10(ratios_varied[isotope]), 
                             np.repeat(isotope_plot, len(ratios_varied[isotope])), 
                             marker = ".", color = c, s=20, alpha = 0.25)
@@ -1653,7 +1387,6 @@ class LEFT(object):
         if normalized:
             plt.axvline(0, color="k", linewidth=1, label="")
             plt.legend([r"$m_{\beta\beta}$", self.name], loc="upper right", ncol=1, fontsize = 20)
-            #plt.axvline(0, color="k", linewidth=1, label="")
             plt.xlabel(r"$\log_{10}\frac{R^{\mathcal{O}_i}}{R^{m_{\beta\beta}}}$", fontsize=30)
         else:
             plt.legend([self.name], loc="upper right", ncol=1, fontsize = 20)
@@ -1733,7 +1466,7 @@ class LEFT(object):
         if savefig:
             plt.savefig("angular_correlation_"+isotope+"_"+self.name+".png", dpi = 300)
             
-    def plot_spec(self, isotope="76Ge", WC = None, method=None, print_title = False, addgrid = True, show_mbb = True, savefig=False, file = "spec.png"):
+    def plot_spec(self, isotope="76Ge", WC = None, method=None, print_title = False, addgrid = True, show_mbb = True, savefig=False, file = "spec.png", npoints = 1000):
         if WC == None:
             WC = self.WC.copy()
         #generates a plot of the single electron spectrum
@@ -1767,7 +1500,7 @@ class LEFT(object):
         element = self.elements[isotope]
         
         #energy range for spectrum
-        E = np.linspace(self.m_e_MEV+epsilon, element.Delta_M-self.m_e_MEV-epsilon, 1000)
+        E = np.linspace(self.m_e_MEV+epsilon, element.Delta_M-self.m_e_MEV-epsilon, npoints)
         
         #normalized energy
         Ebar = (E-self.m_e_MEV)/(element.Delta_M-2*self.m_e_MEV)
@@ -1810,7 +1543,7 @@ class LEFT(object):
             
     def plot_corr(self, isotope="76Ge", WC = None, method=None,
                   print_title = False, addgrid = True, show_mbb = True, 
-                  savefig=False, file = "angular_corr.png"):
+                  savefig=False, file = "angular_corr.png", npoints=1000):
         #generates a plot of the angular correlation coefficient
         if WC == None:
             WC = self.WC.copy()
@@ -1847,7 +1580,7 @@ class LEFT(object):
         element = self.elements[isotope]
         
         #energy range for spectrum
-        E = np.linspace(self.m_e_MEV+epsilon, element.Delta_M-self.m_e_MEV-epsilon, 1000)
+        E = np.linspace(self.m_e_MEV+epsilon, element.Delta_M-self.m_e_MEV-epsilon, npoints)
         
         #normalized energy
         Ebar = (E-self.m_e_MEV)/(element.Delta_M-2*self.m_e_MEV)
@@ -2087,7 +1820,7 @@ class LEFT(object):
         return(results, scales)
         #return(results, scales)
 
-    def get_limits_old(self, half_life, isotope = "76Ge", scale = 80, basis = None, method=None):
+    def get_limits_old(self, half_life, isotope = "76Ge", scale = m_W, basis = None, method=None):
     #this function can calculate the limits on the different LEFT coefficients for a given experimental half_life and isotope
     #the limits are calculate at the scale "scale" and for the chosen basis
         
@@ -2186,9 +1919,9 @@ class LEFT(object):
         alpha2=alpha[1]
 
         #squared mass differences
-        m21 = 7.53e-5
-        m32 = 2.453e-3
-        m32IO = -2.546e-3
+        #m21 = 7.53e-5
+        #m32 = 2.453e-3
+        #m32IO = -2.546e-3
 
         #get mass eigenvalues from minimal neutrino mass
         m = m_min
@@ -2205,13 +1938,13 @@ class LEFT(object):
         M_nu_IO = np.diag([m1IO,m2IO,m3IO])
 
         #mixing angles
-        s12 = np.sqrt(0.307)
-        s23 = np.sqrt(0.546)
-        s13 = np.sqrt(2.2e-2)
+        #s12 = np.sqrt(0.307)
+        #s23 = np.sqrt(0.546)
+        #s13 = np.sqrt(2.2e-2)
 
-        c12 = np.cos(np.arcsin(s12))
-        c23 = np.cos(np.arcsin(s23))
-        c13 = np.cos(np.arcsin(s13))
+        #c12 = np.cos(np.arcsin(s12))
+        #c23 = np.cos(np.arcsin(s23))
+        #c13 = np.cos(np.arcsin(s13))
 
         #mixing marix
         U = np.array([[c12*c13, s12*c13, s13*np.exp(-1j*dcp)], 
@@ -2220,7 +1953,7 @@ class LEFT(object):
 
         majorana = np.diag([1, np.exp(1j*alpha1), np.exp(1j*alpha2)])
 
-        UPMNS = U@majorana
+        UPMNS = U @ majorana
 
         #create non-diagonal mass matrix
         m_BB_NO = np.abs(UPMNS[0,0]**2*m1+UPMNS[0,1]**2*m2+UPMNS[0,2]**2*m3)
@@ -2232,6 +1965,74 @@ class LEFT(object):
             return(m_BB_IO)
         else:
             return(m_BB_NO,m_BB_IO)
+        
+        
+    def _m_bb_minus(self, alpha, m_min=1, ordering="both", dcp=1.36):
+        res = self._m_bb(alpha = alpha,
+                         m_min = m_min,
+                         ordering = ordering, 
+                         dcp = dcp)
+        
+        if ordering == "NO":
+            return(-res)
+        elif ordering =="IO":
+            return(-res)
+        else:
+            return(-res[0],-res[1])
+        
+        ##this function returns -m_bb from m_min
+        #
+        ##majorana phases
+        #alpha1=alpha[0]
+        #alpha2=alpha[1]
+        #
+        ##squared mass differences
+        ##m21 = 7.53e-5
+        ##m32 = 2.453e-3
+        ##m32IO = -2.546e-3
+        #
+        ##get mass eigenvalues from minimal neutrino mass
+        #m = m_min
+        #m1 = m
+        #m2 = np.sqrt(m1**2+m21)
+        #m3 = np.sqrt(m2**2+m32)
+        #
+        #m3IO = m
+        #m2IO = np.sqrt(m3IO**2-m32IO)
+        #m1IO = np.sqrt(m2IO**2-m21)
+        #
+        ##create diagonal mass matrices
+        #M_nu_NO = np.diag([m1,m2,m3])
+        #M_nu_IO = np.diag([m1IO,m2IO,m3IO])
+        #
+        ##mixing angles
+        ##s12 = np.sqrt(0.307)
+        ##s23 = np.sqrt(0.546)
+        ##s13 = np.sqrt(2.2e-2)
+        #
+        ##c12 = np.cos(np.arcsin(s12))
+        ##c23 = np.cos(np.arcsin(s23))
+        ##c13 = np.cos(np.arcsin(s13))
+        #
+        ##mixing matrix
+        #U = np.array([[c12*c13, s12*c13, s13*np.exp(-1j*dcp)], 
+        #               [-s12*c23-c12*s23*s13*np.exp(1j*dcp), c12*c23-s12*s23*s13*np.exp(1j*dcp), s23*c13], 
+        #               [s12*s23-c12*c23*s13*np.exp(1j*dcp), -c12*s23-s12*c23*s13*np.exp(1j*dcp), c23*c13]])#
+        #
+        #majorana = np.diag([1, np.exp(1j*alpha1), np.exp(1j*alpha2)])
+        #
+        #UPMNS = U@majorana
+        #
+        ##create non-diagonal mass matrix
+        #m_BB_NO = np.abs(UPMNS[0,0]**2*m1+UPMNS[0,1]**2*m2+UPMNS[0,2]**2*m3)
+        #m_BB_IO = np.abs(UPMNS[0,0]**2*m1IO+UPMNS[0,1]**2*m2IO+UPMNS[0,2]**2*m3IO)
+        #
+        #if ordering == "NO":
+        #    return(-m_BB_NO)
+        #elif ordering =="IO":
+        #    return(-m_BB_IO)
+        #else:
+        #    return(-m_BB_NO,-m_BB_IO)
         
         
     def _m_eff(self, 
@@ -2288,9 +2089,9 @@ class LEFT(object):
             
 
         #squared mass differences [eV]
-            m21 = 7.53e-5
-            m32 = 2.453e-3
-            m32IO = -2.546e-3
+            #m21 = 7.53e-5
+            #m32 = 2.453e-3
+            #m32IO = -2.546e-3
 
             #get mass eigenvalues from minimal neutrino mass in [eV]
             m = m_min
@@ -2307,13 +2108,13 @@ class LEFT(object):
             M_nu_IO = np.diag([m1IO,m2IO,m3IO])
 
             #mixing angles
-            s12 = np.sqrt(0.307)
-            s23 = np.sqrt(0.546)
-            s13 = np.sqrt(2.2e-2)
+            #s12 = np.sqrt(0.307)
+            #s23 = np.sqrt(0.546)
+            #s13 = np.sqrt(2.2e-2)
 
-            c12 = np.cos(np.arcsin(s12))
-            c23 = np.cos(np.arcsin(s23))
-            c13 = np.cos(np.arcsin(s13))
+            #c12 = np.cos(np.arcsin(s12))
+            #c23 = np.cos(np.arcsin(s23))
+            #c13 = np.cos(np.arcsin(s13))
 
             #mixing marix
             U = np.array([[c12*c13, s12*c13, s13*np.exp(-1j*dcp)], 
@@ -2335,6 +2136,7 @@ class LEFT(object):
             else:
                 factor = 1
             self.WC[vary_WC] = np.exp(1j*alpha)*m_min*factor
+            
         g_A = self.LEC["A"]
         V_ud = 0.97417
 
@@ -2382,155 +2184,115 @@ class LEFT(object):
                      normalize_to_mass = False, #return value normalized to the standard mass mechanism
                      vary_WC  = "m_min"         #variational WC
                     ):
-        m_bb_backup = self.WC["m_bb"]
-        WC_backup = self.WC.copy()
-        #majorana phases
-        if vary_WC  == "m_min":
-            #for m_min you have two majorana phases in the mixing matrix
-            #for all other WCs you just need to vary the corresponding phase of the WC
-            alpha1=alpha[0]
-            alpha2=alpha[1]
-            
-
-        #squared mass differences [eV]
-            m21 = 7.53e-5
-            m32 = 2.453e-3
-            m32IO = -2.546e-3
-
-            #get mass eigenvalues from minimal neutrino mass in [eV]
-            m = m_min
-            m1 = m
-            m2 = np.sqrt(m1**2+m21)
-            m3 = np.sqrt(m2**2+m32)
-
-            m3IO = m
-            m2IO = np.sqrt(m3IO**2-m32IO)
-            m1IO = np.sqrt(m2IO**2-m21)
-
-            #create diagonal mass matrices
-            M_nu_NO = np.diag([m1,m2,m3])
-            M_nu_IO = np.diag([m1IO,m2IO,m3IO])
-
-            #mixing angles
-            s12 = np.sqrt(0.307)
-            s23 = np.sqrt(0.546)
-            s13 = np.sqrt(2.2e-2)
-
-            c12 = np.cos(np.arcsin(s12))
-            c23 = np.cos(np.arcsin(s23))
-            c13 = np.cos(np.arcsin(s13))
-
-            #mixing marix
-            U = np.array([[c12*c13, s12*c13, s13*np.exp(-1j*dcp)], 
-                           [-s12*c23-c12*s23*s13*np.exp(1j*dcp), c12*c23-s12*s23*s13*np.exp(1j*dcp), s23*c13], 
-                           [s12*s23-c12*c23*s13*np.exp(1j*dcp), -c12*s23-s12*c23*s13*np.exp(1j*dcp), c23*c13]])
-
-            majorana = np.diag([1, np.exp(1j*alpha1), np.exp(1j*alpha2)])
-
-            UPMNS = U@majorana
-
-            #create non-diagonal mass matrix
-            m_BB_NO = np.abs(UPMNS[0,0]**2*m1+UPMNS[0,1]**2*m2+UPMNS[0,2]**2*m3)
-            m_BB_IO = np.abs(UPMNS[0,0]**2*m1IO+UPMNS[0,1]**2*m2IO+UPMNS[0,2]**2*m3IO)
-
-            self.WC["m_bb"] = m_BB_NO*1e-9 #[GeV]
-        else:
-            if vary_WC == "m_bb":
-                factor = 1e-9
-            else:
-                factor = 1
-            self.WC[vary_WC] = np.exp(1j*alpha)*m_min*factor
-        g_A = self.LEC["A"]
-        V_ud = 0.97417
-
-
-        G01 = self.to_G(isotope)["01"]
-        M3 = self.amplitudes(isotope, self.WC)[1]["nu(3)"]
-        #NO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
-        NO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
         
-        
-
-        
-        if vary_WC == "m_min":
-            if normalize_to_mass:
-                NO_eff /= self.WC["m_bb"]
-            self.WC["m_bb"] = m_BB_IO*1e-9
-            #IO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
-            IO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
-
-            if normalize_to_mass:
-                IO_eff /= self.WC["m_bb"]
-
-            self.WC["m_bb"] = m_bb_backup
-            self.WC = WC_backup.copy()
-            #if len(alpha)>2:
-            #    self.LEC = LEC_backup.copy()
-            if ordering == "NO":
-                return(-NO_eff)
-            elif ordering =="IO":
-                return(-IO_eff)
-            else:
-                return(-NO_eff,-IO_eff)
-        else:
-            self.WC = WC_backup.copy()
-            return(-NO_eff)
-    
-    
-    def _m_bb_minus(self, alpha, m_min=1, ordering="both", dcp=1.36):
-        #this function returns -m_bb from m_min
-        
-        #majorana phases
-        alpha1=alpha[0]
-        alpha2=alpha[1]
-
-        #squared mass differences
-        m21 = 7.53e-5
-        m32 = 2.453e-3
-        m32IO = -2.546e-3
-
-        #get mass eigenvalues from minimal neutrino mass
-        m = m_min
-        m1 = m
-        m2 = np.sqrt(m1**2+m21)
-        m3 = np.sqrt(m2**2+m32)
-
-        m3IO = m
-        m2IO = np.sqrt(m3IO**2-m32IO)
-        m1IO = np.sqrt(m2IO**2-m21)
-
-        #create diagonal mass matrices
-        M_nu_NO = np.diag([m1,m2,m3])
-        M_nu_IO = np.diag([m1IO,m2IO,m3IO])
-
-        #mixing angles
-        s12 = np.sqrt(0.307)
-        s23 = np.sqrt(0.546)
-        s13 = np.sqrt(2.2e-2)
-
-        c12 = np.cos(np.arcsin(s12))
-        c23 = np.cos(np.arcsin(s23))
-        c13 = np.cos(np.arcsin(s13))
-
-        #mixing matrix
-        U = np.array([[c12*c13, s12*c13, s13*np.exp(-1j*dcp)], 
-                       [-s12*c23-c12*s23*s13*np.exp(1j*dcp), c12*c23-s12*s23*s13*np.exp(1j*dcp), s23*c13], 
-                       [s12*s23-c12*c23*s13*np.exp(1j*dcp), -c12*s23-s12*c23*s13*np.exp(1j*dcp), c23*c13]])
-
-        majorana = np.diag([1, np.exp(1j*alpha1), np.exp(1j*alpha2)])
-
-        UPMNS = U@majorana
-
-        #create non-diagonal mass matrix
-        m_BB_NO = np.abs(UPMNS[0,0]**2*m1+UPMNS[0,1]**2*m2+UPMNS[0,2]**2*m3)
-        m_BB_IO = np.abs(UPMNS[0,0]**2*m1IO+UPMNS[0,1]**2*m2IO+UPMNS[0,2]**2*m3IO)
-
+        res = self._m_eff(alpha = alpha,
+                     m_min = m_min, 
+                     ordering = ordering,
+                     dcp = dcp,
+                     isotope = isotope,   
+                     normalize_to_mass = normalize_to_mass, 
+                     vary_WC  = vary_WC
+              )
         if ordering == "NO":
-            return(-m_BB_NO)
+            return(-res)
         elif ordering =="IO":
-            return(-m_BB_IO)
+            return(-res)
         else:
-            return(-m_BB_NO,-m_BB_IO)
+            return(-res[0],-res[1])
+        #return(-res)
+        #m_bb_backup = self.WC["m_bb"]
+        #WC_backup = self.WC.copy()
+        ##majorana phases
+        #if vary_WC  == "m_min":
+        #    #for m_min you have two majorana phases in the mixing matrix
+        #    #for all other WCs you just need to vary the corresponding phase of the WC
+        #    alpha1=alpha[0]
+        #    alpha2=alpha[1]
+        #    
+        #
+        #    #squared mass differences [eV]
+        #    #m21 = 7.53e-5
+        #    #m32 = 2.453e-3
+        #    #m32IO = -2.546e-3
+        #
+        #    #get mass eigenvalues from minimal neutrino mass in [eV]
+        #    m = m_min
+        #    m1 = m
+        #    m2 = np.sqrt(m1**2+m21)
+        #    m3 = np.sqrt(m2**2+m32)
+        #
+        #    m3IO = m
+        #    m2IO = np.sqrt(m3IO**2-m32IO)
+        #    m1IO = np.sqrt(m2IO**2-m21)
+        #
+        #    #create diagonal mass matrices
+        #    M_nu_NO = np.diag([m1,m2,m3])
+        #    M_nu_IO = np.diag([m1IO,m2IO,m3IO])
+        #
+        #    #mixing angles
+        #    #s12 = np.sqrt(0.307)
+        #    #s23 = np.sqrt(0.546)
+        #    #s13 = np.sqrt(2.2e-2)
+        #
+        #    #c12 = np.cos(np.arcsin(s12))
+        #    #c23 = np.cos(np.arcsin(s23))
+        #    #c13 = np.cos(np.arcsin(s13))
+        #
+        #    #mixing marix
+        #    U = np.array([[c12*c13, s12*c13, s13*np.exp(-1j*dcp)], 
+        #                   [-s12*c23-c12*s23*s13*np.exp(1j*dcp), c12*c23-s12*s23*s13*np.exp(1j*dcp), s23*c13], 
+        #                   [s12*s23-c12*c23*s13*np.exp(1j*dcp), -c12*s23-s12*c23*s13*np.exp(1j*dcp), c23*c13]])
+        #
+        #    majorana = np.diag([1, np.exp(1j*alpha1), np.exp(1j*alpha2)])
+        #
+        #    UPMNS = U@majorana
+        #
+        #    #create non-diagonal mass matrix
+        #    m_BB_NO = np.abs(UPMNS[0,0]**2*m1+UPMNS[0,1]**2*m2+UPMNS[0,2]**2*m3)
+        #    m_BB_IO = np.abs(UPMNS[0,0]**2*m1IO+UPMNS[0,1]**2*m2IO+UPMNS[0,2]**2*m3IO)
+        #
+        #    self.WC["m_bb"] = m_BB_NO*1e-9 #[GeV]
+        #else:
+        #    if vary_WC == "m_bb":
+        #        factor = 1e-9
+        #    else:
+        #        factor = 1
+        #    self.WC[vary_WC] = np.exp(1j*alpha)*m_min*factor
+        #g_A = self.LEC["A"]
+        #V_ud = 0.97417
+        #
+        #
+        #G01 = self.to_G(isotope)["01"]
+        #M3 = self.amplitudes(isotope, self.WC)[1]["nu(3)"]
+        #NO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
+        #NO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
+        #
+        # 
+        #
+        #
+        #if vary_WC == "m_min":
+        #    if normalize_to_mass:
+        #        NO_eff /= self.WC["m_bb"]
+        #    self.WC["m_bb"] = m_BB_IO*1e-9
+        #    #IO_min_eff = self.m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * self.t_half(element_name)**(-1/2)
+        #    IO_eff = self.m_e / (g_A**2*M3*G01**(1/2)) * self.t_half(isotope)**(-1/2)
+        #
+        #    if normalize_to_mass:
+        #        IO_eff /= self.WC["m_bb"]
+        #
+        #    self.WC["m_bb"] = m_bb_backup
+        #    self.WC = WC_backup.copy()
+        #    #if len(alpha)>2:
+        #    #    self.LEC = LEC_backup.copy()
+        #    if ordering == "NO":
+        #        return(-NO_eff)
+        #    elif ordering =="IO":
+        #        return(-IO_eff)
+        #    else:
+        #        return(-NO_eff,-IO_eff)
+        #else:
+        #    self.WC = WC_backup.copy()
+        #    return(-NO_eff)
         
        
     def _m_eff_minmax(self, m_min, isotope = "76Ge", ordering="both", dcp=1.36, 
@@ -2694,6 +2456,7 @@ class LEFT(object):
             
 
         for idx in range(n_dots):
+            
             m_min = M[idx]
             if vary_WC  in ["m_min", "m_sum"]:
                 [NO_min[idx], NO_max[idx]], [IO_min[idx], IO_max[idx]] = self._m_eff_minmax(m_min, 
@@ -2927,8 +2690,8 @@ class LEFT(object):
         if cosmo:
             if vary_WC != "m_sum":
                 def m_sum(m_min):
-                    m21 = 7.53e-5
-                    m32 = 2.453e-3
+                    #m21 = 7.53e-5
+                    #m32 = 2.453e-3
                     msum = m_min + np.sqrt(m_min**2+m21) + np.sqrt(m_min**2 + m21 + m32)
                     return(msum-m_cosmo)
                 cosmo_limit = scipy.optimize.root(m_sum, x0 = 0.05).x[0]
@@ -3028,30 +2791,40 @@ class LEFT(object):
                       normalize_to_mass = False, #return value normalized to the standard mass mechanism
                       vary_WC  = "m_min"
                      ):
-        WC_backup = self.WC.copy()
         
-        
-        m_bb_backup = self.WC["m_bb"]
-        if vary_WC == "m_min":
-            self.WC["m_bb"] = self._m_bb(alpha=alpha, m_min=m_min, ordering=ordering, dcp=dcp)*1e-9
-        else:
-            if vary_WC == "m_bb":
-                factor = 1e-9
-            else:
-                factor = 1
-            self.WC[vary_WC] = np.exp(1j*alpha)*m_min*factor
-        t_half = self.t_half(isotope = isotope)
-        if normalize_to_mass:
-            WCbackup = self.WC.copy()
-            for operator in self.WC:
-                if operator != "m_bb":
-                    self.WC[operator] = 0
-            t_half_mbb = self.t_half(isotope = isotope)
-            t_half/=t_half_mbb
-            self.WC = WCbackup.copy()
-        self.WC = WC_backup.copy()
-        self.WC["m_bb"]=m_bb_backup
-        return(-t_half)
+        res = self._t_half(alpha, 
+                           m_min,   
+                           ordering=ordering,
+                           dcp=dcp,    
+                           isotope = isotope,
+                           normalize_to_mass = normalize_to_mass,
+                           vary_WC  = vary_WC
+                          )
+        return(-res)
+        #WC_backup = self.WC.copy()
+        # 
+        #
+        #m_bb_backup = self.WC["m_bb"]
+        #if vary_WC == "m_min":
+        #    self.WC["m_bb"] = self._m_bb(alpha=alpha, m_min=m_min, ordering=ordering, dcp=dcp)*1e-9
+        #else:
+        #    if vary_WC == "m_bb":
+        #        factor = 1e-9
+        #    else:
+        #        factor = 1
+        #    self.WC[vary_WC] = np.exp(1j*alpha)*m_min*factor
+        #t_half = self.t_half(isotope = isotope)
+        #if normalize_to_mass:
+        #    WCbackup = self.WC.copy()
+        #    for operator in self.WC:
+        #        if operator != "m_bb":
+        #            self.WC[operator] = 0
+        #    t_half_mbb = self.t_half(isotope = isotope)
+        #    t_half/=t_half_mbb
+        #    self.WC = WCbackup.copy()
+        #self.WC = WC_backup.copy()
+        #self.WC["m_bb"]=m_bb_backup
+        #return(-t_half)
     
     def _t_half_minmax(self, 
                        m_min, 
@@ -3292,8 +3065,8 @@ class LEFT(object):
         if cosmo:
             if vary_WC != "m_sum":
                 def m_sum(m_min):
-                    m21 = 7.53e-5
-                    m32 = 2.453e-3
+                    #m21 = 7.53e-5
+                    #m32 = 2.453e-3
                     msum = m_min + np.sqrt(m_min**2+m21) + np.sqrt(m_min**2 + m21 + m32)
                     return(msum-m_cosmo)
                 cosmo_limit = scipy.optimize.root(m_sum, x0 = 0.05).x[0]
@@ -3425,19 +3198,20 @@ class LEFT(object):
                     self.WC = WCbackup.copy()
             else:
                 [NO_min[idx], NO_max[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                      isotope=isotope, ordering=ordering, 
-                                                                                       dcp=dcp, numerical_method=numerical_method,
-                                                                                             normalize_to_mass = normalize_to_mass, 
-                                                                                             vary_WC = vary_WC)
+                                                                 isotope=isotope, ordering=ordering, 
+                                                                 dcp=dcp, numerical_method=numerical_method,
+                                                                 normalize_to_mass = normalize_to_mass, 
+                                                                 vary_WC = vary_WC)
                 if compare_to_mass:
                     WCbackup = self.WC.copy()
                     for operator in self.WC:
                         self.WC[operator] = 0
 
                     [NO_min_mbb[idx], NO_max_mbb[idx]] = self._t_half_minmax(m_min=m_min, 
-                                                                                          isotope=isotope, ordering=ordering, 
-                                                                                           dcp=dcp, numerical_method=numerical_method, normalize_to_mass = normalize_to_mass, 
-                                                                                             vary_WC = vary_WC)
+                                                                             isotope=isotope, ordering=ordering, 
+                                                                             dcp=dcp, numerical_method=numerical_method, 
+                                                                             normalize_to_mass = normalize_to_mass, 
+                                                                             vary_WC = vary_WC)
 
                     self.WC = WCbackup.copy()
 
@@ -3538,8 +3312,8 @@ class LEFT(object):
         if cosmo:
             if vary_WC != "m_sum":
                 def m_sum(m_min):
-                    m21 = 7.53e-5
-                    m32 = 2.453e-3
+                    #m21 = 7.53e-5
+                    #m32 = 2.453e-3
                     msum = m_min + np.sqrt(m_min**2+m21) + np.sqrt(m_min**2 + m21 + m32)
                     return(msum-m_cosmo)
                 cosmo_limit = scipy.optimize.root(m_sum, x0 = 0.05).x[0]
@@ -3672,41 +3446,19 @@ class LEFT(object):
                 
         return(fig.get_figure())
     
-    def plot_m_eff_scatter(self, vary_WC = "m_min", isotope="76Ge", 
-                           vary_phases = True, vary_LECs=False, 
-                           n_dots=10000, ordering = "both", 
-                           alpha_plot=1, x_min=1e-4, x_max = 1, 
-                           y_min = None, y_max = None, 
-                           cosmo = False, m_cosmo = 0.15, 
-                           compare_to_mass = False, normalize_to_mass = False, 
-                           savefig=False, file="m_eff_scatter.png"):
+    def plot_m_eff_scatter(self, 
+                           vary_WC = "m_min", 
+                           vary_phases = True, 
+                           isotope="76Ge", 
+                           vary_LECs=False, n_dots=10000, ordering = "both", 
+                           save=False, file="m_eff_scatter.png", alpha_plot=1, 
+                           x_min=1e-4, x_max = 1, y_min = None, y_max = None, 
+                           cosmo = True, m_cosmo = 0.15, compare_to_mass = False, normalize_to_mass = False,
+                           alpha_mass = 0.05, 
+                           return_points = False, 
+                           markersize = 0.15):
         #model = EFT.LEFT(WC)
         #m_N = 0.93
-        LECs = { 'Tprime': 1,
-                 'Tpipi': 1,
-                 '1piN': 1,
-                 '6piN': 1,
-                 '7piN': 1,
-                 '8piN': 1,
-                 '9piN': 1,
-                 'VLpiN': 1,
-                 'TpiN': 1,
-                 '1NN': 1,
-                 '6NN': 1,
-                 '7NN': 1,
-                 'VLNN': 1,
-                 'TNN': 1,
-                 'VLE': 1,
-                 'VLme': 1,
-                 'VRE': 1,
-                 'VRme': 1,
-                 '2NN': 157.91367041742973,
-                 '3NN': 157.91367041742973,
-                 '4NN': 157.91367041742973,
-                 '5NN': 157.91367041742973,
-                 'nuNN': -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
-               }
-        
         
         if vary_WC == "m_sum":
             x_min = np.max([x_min, f.m_min_to_m_sum(0)["NO"]])
@@ -3727,14 +3479,12 @@ class LEFT(object):
         else:
             mspace = np.logspace((np.log10(x_min)),(np.log10(x_max)), n_dots)
         
-        
         if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
             warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass m_min, the sum of neutrino masses m_sum or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
             
         if compare_to_mass:
             M_mbb = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), 100)
-            #M_mbb = np.round(np.linspace(0, len(mspace) - 1, 100)).astype(int)
             NO_min_mbb = np.zeros(100)
             NO_max_mbb = np.zeros(100)
             IO_min_mbb = np.zeros(100)
@@ -3764,8 +3514,7 @@ class LEFT(object):
         fig = plt.figure(figsize=(9, 8))
         points = np.zeros((n_dots,2))
         pointsIO = np.zeros((n_dots,2))
-        
-        
+        mspace = np.logspace(np.log10(x_min), np.log10(x_max), int(10*n_dots))
         forbidden_LECsNO = []
         forbidden_LECsNOm = []
         forbidden_LECsIO = []
@@ -3790,7 +3539,7 @@ class LEFT(object):
                     m_sum = f.m_min_to_m_sum(m_min)
                     msum = m_sum["NO"]
                     msumIO = m_sum["IO"]
-            
+                
             else:
                 if vary_WC == "m_bb":
                     self.WC[vary_WC] = np.random.choice(mspace)*1e-9
@@ -3800,14 +3549,7 @@ class LEFT(object):
                     alpha = np.pi*np.random.rand()
                     self.WC[vary_WC] *= np.exp(1j*alpha)
             if vary_LECs:
-                for LEC in LECs:
-                    if LEC == "nuNN":
-                        random_LEC = (np.random.rand()+0.5)*LECs[LEC]
-                        self.LEC[LEC] = random_LEC
-                    else:
-                        #random_LEC = variation_range*2*(np.random.rand()-0.5)*LECs[LEC]
-                        random_LEC = np.random.choice([1,-1])*((np.sqrt(10)-1/np.sqrt(10))*np.random.rand()+1/np.sqrt(10))*LECs[LEC]
-                        self.LEC[LEC] = random_LEC
+                self._vary_LECs(inplace = True)
 
             t = self.t_half(isotope)
             M3 = self.amplitudes(isotope, self.WC)[1]["nu(3)"]
@@ -3853,8 +3595,8 @@ class LEFT(object):
                     points[x][0] = np.absolute(self.WC[vary_WC])
             
             
-        print(pointsIO[:][1])
-        print(points[:][1])
+        #print(pointsIO[:][1])
+        #print(points[:][1])
         self.WC["m_bb"] = m_backup
         self.LEC = LEC_backup.copy()
         if vary_WC not in ["m_min", "m_sum"]:
@@ -3873,10 +3615,10 @@ class LEFT(object):
             print(cosmo_limit)
             
             #m_cosmo
-            plt.fill_betweenx([y_min, y_max], [x_max], [cosmo_limit], alpha=0.1, color="k")
+            plt.fill_betweenx([y_min, y_max], [1], [cosmo_limit], alpha=0.1, color="k")
         if vary_WC in ["m_min", "m_sum"]:   
-            plt.plot(points[:,0],points[:,1], "b.", alpha = alpha_plot, label="NO", markersize = 0.15)
-            plt.plot(pointsIO[:,0],pointsIO[:,1], "r.", alpha = alpha_plot, label="IO", markersize = 0.15)
+            plt.plot(points[:,0],points[:,1], "b.", alpha = alpha_plot, label="NO", markersize = markersize)
+            plt.plot(pointsIO[:,0],pointsIO[:,1], "r.", alpha = alpha_plot, label="IO", markersize = markersize)
         else:
             plt.plot(points[:,0],points[:,1], "b,", alpha = alpha_plot, label=vary_WC)
         plt.yscale("log")
@@ -3900,67 +3642,91 @@ class LEFT(object):
         plt.ylim(y_min,y_max)
         if compare_to_mass:
             if ordering == "NO":
-                plt.plot(M_mbb,NO_min_mbb, "grey")
-                plt.plot(M_mbb,NO_max_mbb, "grey")
-                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, color="k", alpha=0.1, label = r"$m_{\beta\beta}$")
+                #plt.plot(M_mbb,NO_min_mbb, "grey")
+                #plt.plot(M_mbb,NO_max_mbb, "grey")
+                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, #color="k", alpha=0.1, 
+                                 facecolor=(0,0,0,alpha_mass), 
+                                 linewidth = 1, 
+                                 edgecolor = (0,0,0,1),
+                                 label = r"$m_{\beta\beta}$")
                 
             elif ordering == "IO":
-                plt.plot(M_mbb,IO_min_mbb, "grey")
-                plt.plot(M_mbb,IO_max_mbb, "grey")
-                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, color="k", alpha=0.1, label=r"$m_{\beta\beta}$")
+                #plt.plot(M_mbb,IO_min_mbb, "grey")
+                #plt.plot(M_mbb,IO_max_mbb, "grey")
+                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, #color="k", alpha=0.1, 
+                                 facecolor=(0,0,0,alpha_mass), 
+                                 linewidth = 1, 
+                                 edgecolor = (0,0,0,1),
+                                 label=r"$m_{\beta\beta}$")
             else:
-                plt.plot(M_mbb,NO_min_mbb, "grey")
-                plt.plot(M_mbb,NO_max_mbb, "grey")
-                plt.plot(M_mbb,IO_min_mbb, "grey")
-                plt.plot(M_mbb,IO_max_mbb, "grey")
-                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, color="k", alpha=0.1, label=r"$m_{\beta\beta}$")
-                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, color="k", alpha=0.1)
+                plt.plot(M_mbb,NO_min_mbb, "k", linewidth = 1)
+                plt.plot(M_mbb,NO_max_mbb, "k", linewidth = 1)
+                plt.plot(M_mbb,IO_min_mbb, "k", linewidth = 1)
+                plt.plot(M_mbb,IO_max_mbb, "k", linewidth = 1)
+                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, #color="k", alpha=0.1,
+                                 facecolor=(0.,0.,0.,alpha_mass), 
+                                 linewidth = 1, 
+                                 edgecolor = (0,0,0,1),
+                                 label=r"$m_{\beta\beta}$")
+                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, #color="k", alpha=0.1
+                                 facecolor=(0.,0.,0.,alpha_mass), 
+                                 linewidth = 1, 
+                                 edgecolor = (0,0,0,1)
+                                )
         if vary_WC in ["m_min", "m_sum"]:
             legend_elements = [Line2D([0], [0], marker='o', color='w', label='NO',
                                   markerfacecolor='b', markersize=10),
                            Line2D([0], [0], marker='o', color='w', label='IO',
                                   markerfacecolor='r', markersize=10)]
             plt.legend(handles = legend_elements, fontsize=20)
-        if savefig:
+        if save:
             plt.savefig(file)
         return(fig)
-        #return(forbidden_LECsNO, forbidden_LECsNOm, forbidden_LECsIO, forbidden_LECsIOm)
         
-    def plot_t_half_scatter(self, vary_WC = "m_min", vary_phases = True, vary_LECs=False, experiments=None, n_dots=10000, 
-                            savefig = False, file="t_half_scatter.png", alpha_plot=1, isotope = "76Ge", ordering = None, 
-                            x_min=1e-4, x_max = 1, y_min = None, y_max = None, cosmo=True, m_cosmo  = 0.15, 
-                            compare_to_mass = False, normalize_to_mass = False):
+    def plot_t_half_scatter(self, vary_WC = "m_min", 
+                            vary_phases = True, 
+                            vary_LECs=False, 
+                            experiments=None, 
+                            n_dots=10000, 
+                            save = False, file="t_half_scatter.png", alpha_plot=1, 
+                            isotope = "76Ge", 
+                            ordering = None, 
+                            x_min=1e-4, x_max = 1, y_min = None, y_max = None, 
+                            cosmo=True, #show the cosmo limit
+                            m_cosmo  = 0.15, #cosmo limit on sum m_nu
+                            compare_to_mass = False, #plots the standard mass mechanism additionally
+                            normalize_to_mass = False, #plots t / t_mass
+                            alpha_mass = 0.05, 
+                            return_points = False, 
+                            markersize = 0.15):
         #model = EFT.LEFT(WC)
         #m_N = 0.93
         #element_name = "76Ge"
+        
+        if vary_WC == "m_sum":
+            x_min = np.max([x_min, f.m_min_to_m_sum(0)["NO"]])
+            x_max = np.max([x_max, f.m_min_to_m_sum(0)["NO"]])
+            Msum = np.logspace(np.log10(x_min), np.log10(x_max), n_dots)
+            #print(Msum)
+            mspace = Msum.copy()
+            for idx in range(n_dots):
+                mspace[idx] = f.m_sum_to_m_min(Msum[idx])["NO"]
+            #x_min = np.max([f.m_sum_to_m_min(x_min)["NO"], 1e-10])
+            #x_max = np.max([f.m_sum_to_m_min(x_max)["NO"], 1e-10])
+            #Msum = np.logspace(x_min, x_max, n_dots)
+            
+            #print(x_min)
+            #print(x_max)
+        
+        #M = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), n_dots)
+        else:
+            mspace = np.logspace((np.log10(x_min)),(np.log10(x_max)), n_dots)
+        
+        
         n_points = n_dots
         if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
             warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass m_min, the sum of neutrino masses m_sum or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
-        LECs = { 'Tprime': 1,
-                 'Tpipi': 1,
-                 '1piN': 1,
-                 '6piN': 1,
-                 '7piN': 1,
-                 '8piN': 1,
-                 '9piN': 1,
-                 'VLpiN': 1,
-                 'TpiN': 1,
-                 '1NN': 1,
-                 '6NN': 1,
-                 '7NN': 1,
-                 'VLNN': 1,
-                 'TNN': 1,
-                 'VLE': 1,
-                 'VLme': 1,
-                 'VRE': 1,
-                 'VRme': 1,
-                 '2NN': 157.91367041742973,
-                 '3NN': 157.91367041742973,
-                 '4NN': 157.91367041742973,
-                 '5NN': 157.91367041742973,
-                 'nuNN': -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
-               }
         
         if compare_to_mass:
             M_mbb = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), 100)
@@ -3994,12 +3760,12 @@ class LEFT(object):
         #forbidden_LECsNOm = []
         #forbidden_LECsIO = []
         #forbidden_LECsIOm = []
-        if vary_WC != "m_min":
+        if vary_WC not in ["m_min", "m_sum"]:
             WC_backup = self.WC[vary_WC]
         m_backup = self.WC["m_bb"]
         LEC_backup = self.LEC.copy()
         for x in range(n_points):
-            if vary_WC == "m_min":
+            if vary_WC in ["m_min", "m_sum"]:
                 m_min = np.random.choice(mspace)
             #for n_m_min in range(10):
             #    for n_LECs in range(10):
@@ -4009,6 +3775,12 @@ class LEFT(object):
                 mIO = self._m_bb(alpha, m_min, "IO")*1e-9
                 #model_standard.WC["m_bb"] = m
                 self.WC["m_bb"] = m
+                
+                if vary_WC == "m_sum":
+                    m_sum = f.m_min_to_m_sum(m_min)
+                    msum = m_sum["NO"]
+                    msumIO = m_sum["IO"]
+                
             else:
                 if vary_WC == "m_bb":
                     self.WC[vary_WC] = np.random.choice(mspace)*1e-9
@@ -4018,14 +3790,7 @@ class LEFT(object):
                     alpha = np.pi*np.random.rand()
                     self.WC[vary_WC] *= np.exp(1j*alpha)
             if vary_LECs == True:
-                for LEC in LECs:
-                    if LEC == "nuNN":
-                        random_LEC = (np.random.rand()+0.5)*LECs[LEC]
-                        self.LEC[LEC] = random_LEC
-                    else:
-                        #random_LEC = variation_range*2*(np.random.rand()-0.5)*LECs[LEC]
-                        random_LEC = np.random.choice([1,-1])*((np.sqrt(10)-1/np.sqrt(10))*np.random.rand()+1/np.sqrt(10))*LECs[LEC]
-                        self.LEC[LEC] = random_LEC
+                self._vary_LECs(inplace = True)
 
             t = self.t_half(isotope)
             #M3 = model.amplitudes(element_name, model.WC)[1]["nu(3)"]
@@ -4035,7 +3800,7 @@ class LEFT(object):
             #    forbidden_LECsNOm.append(m_min)
             
             points[x][1] = t
-            if normalize_to_mass and vary_WC in ["m_min", "m_bb"]:
+            if normalize_to_mass and vary_WC in ["m_min", "m_bb", "m_sum"]:
                 WC_backup = self.WC.copy()
                 for operator in self.WC:
                     if operator != "m_bb":
@@ -4043,7 +3808,7 @@ class LEFT(object):
                 t_half_mbb = self.t_half(isotope)
                 self.WC = WC_backup.copy()
                 points[x][1] /= t_half_mbb
-            if vary_WC == "m_min":
+            if vary_WC in ["m_min", "m_sum"]:
                 self.WC["m_bb"] = mIO
                 #for LEC in LECs:
                 #    random_LEC = 3*2*(np.random.rand()-0.5)*LECs[LEC]
@@ -4056,10 +3821,14 @@ class LEFT(object):
                 #    forbidden_LECsIOm.append(m_min)
                 #M3 = model.amplitudes(element_name, model.WC)[1]["nu(3)"]
                 #m_effIO = np.absolute(m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * t**(-1/2))*1e+9
-                pointsIO[x][0] = m_min
+                if vary_WC == "m_sum":
+                    pointsIO[x][0] = msumIO
+                    points[x][0] = msum
+                else:
+                    pointsIO[x][0] = m_min
+                    points[x][0] = m_min
                 pointsIO[x][1] = tIO
-                points[x][0] = m_min
-                if normalize_to_mass and vary_WC in ["m_min", "m_bb"]:
+                if normalize_to_mass and vary_WC in ["m_min", "m_bb", "m_sum"]:
                     WC_backup = self.WC.copy()
                     for operator in self.WC:
                         if operator != "m_bb":
@@ -4075,7 +3844,7 @@ class LEFT(object):
 
         self.WC["m_bb"] = m_backup
         self.LEC = LEC_backup.copy()
-        if vary_WC != "m_min":
+        if vary_WC not in ["m_min", "m_sum"]:
             self.WC[vary_WC] = WC_backup
         if y_min == None:
             y_min = np.min([np.min(points[:,1]), np.min(pointsIO[:,1])])
@@ -4095,23 +3864,38 @@ class LEFT(object):
             
         if compare_to_mass:
             if ordering == "NO":
-                plt.plot(M_mbb,NO_min_mbb, "grey")
-                plt.plot(M_mbb,NO_max_mbb, "grey")
-                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, color="k", alpha=0.1, label = r"$m_{\beta\beta}$")
+                #plt.plot(M_mbb,NO_min_mbb, "grey")
+                #plt.plot(M_mbb,NO_max_mbb, "grey")
+                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, #color="k", alpha=0.1, 
+                                 facecolor=(0.,0.,0.,alpha_mas), 
+                                 linewidth = 1, 
+                                 edgecolor = (0,0,0,1),
+                                 label = r"$m_{\beta\beta}$")
                 
             elif ordering == "IO":
-                plt.plot(M_mbb,IO_min_mbb, "grey")
-                plt.plot(M_mbb,IO_max_mbb, "grey")
-                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, color="k", alpha=0.1, label=r"$m_{\beta\beta}$")
+                #plt.plot(M_mbb,IO_min_mbb, "grey")
+                #plt.plot(M_mbb,IO_max_mbb, "grey")
+                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, #color="k", alpha=0.1, 
+                                 facecolor=(0,0,0,alpha_mass), 
+                                 linewidth = 1, 
+                                 edgecolor = (0,0,0,1),
+                                 label=r"$m_{\beta\beta}$")
             else:
-                plt.plot(M_mbb,NO_min_mbb, "grey")
-                plt.plot(M_mbb,NO_max_mbb, "grey")
-                plt.plot(M_mbb,IO_min_mbb, "grey")
-                plt.plot(M_mbb,IO_max_mbb, "grey")
-                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, color="k", alpha=0.1, label=r"$m_{\beta\beta}$")
-                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, color="k", alpha=0.1)
-        plt.plot(points[:,0],points[:,1], "b.", alpha = alpha_plot, markersize = 0.15)
-        plt.plot(pointsIO[:,0],pointsIO[:,1], "r.", alpha = alpha_plot, markersize = 0.15)
+                plt.plot(M_mbb,NO_min_mbb, "k", linewidth = 1)
+                plt.plot(M_mbb,NO_max_mbb, "k", linewidth = 1)
+                plt.plot(M_mbb,IO_min_mbb, "k", linewidth = 1)
+                plt.plot(M_mbb,IO_max_mbb, "k", linewidth = 1)
+                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, #color="k", alpha=alpha_mass, 
+                                 facecolor=(0,0,0,alpha_mass), 
+                                 linewidth = 1, 
+                                 edgecolor = (0,0,0,1),
+                                 label=r"$m_{\beta\beta}$")
+                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, #color="k", alpha=alpha_mass
+                                 facecolor=(0,0,0,alpha_mass), 
+                                 linewidth = 1, 
+                                 edgecolor = (0,0,0,1))
+        plt.plot(points[:,0],points[:,1], "b.", alpha = alpha_plot, markersize = markersize)
+        plt.plot(pointsIO[:,0],pointsIO[:,1], "r.", alpha = alpha_plot, markersize = markersize)
         plt.yscale("log")
         plt.xscale("log")
         if normalize_to_mass:
@@ -4120,6 +3904,8 @@ class LEFT(object):
             plt.ylabel(r"$t_{1/2}$ [yr]", fontsize=20)
         if vary_WC == "m_min":
             plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
+        elif vary_WC == "m_sum":
+            plt.xlabel(r"$\sum_i m_{i}$ [eV]", fontsize=20)
         else:
             if vary_WC == "m_bb":
                 plt.xlabel(r"$|m_{\beta\beta}|$ [eV]", fontsize=20)
@@ -4127,7 +3913,9 @@ class LEFT(object):
                 plt.xlabel(r"$|C_{"+vary_WC[:-3]+"}^{"+vary_WC[-3:]+"}|$", fontsize=20)
         plt.xlim(x_min,x_max)
         plt.ylim(y_min,y_max)
-        if vary_WC == "m_min":
+        if vary_WC in ["m_min", "m_sum"]:
+            plt.legend(fontsize=20)
+        if vary_WC in ["m_min", "m_sum"]:
             legend_elements = [Line2D([0], [0], marker='o', color='w', label='NO',
                                   markerfacecolor='b', markersize=10),
                            Line2D([0], [0], marker='o', color='w', label='IO',
@@ -4139,42 +3927,62 @@ class LEFT(object):
                 plt.axhline(experiments[experiment], label )
                 plt.text(x = 1e-3, y = experiments[experiment], s = experiment)
         #return(forbidden_LECsNO, forbidden_LECsNOm, forbidden_LECsIO, forbidden_LECsIOm)
-        if savefig == True:
+        if save == True:
             plt.savefig(file)
+        if return_points:
+            points = {"NO"     : points,
+                      "IO"     : pointsIO}
+            return(fig, points)
         return(fig)
-    def plot_t_half_inv_scatter(self, vary_WC = "m_min", vary_phases = True, vary_LECs=False, experiments=None, n_dots=10000, 
-                                savefig = False, file="t_half_scatter.png", alpha_plot=1, isotope = "76Ge", 
-                                x_min=1e-4, x_max = 1, y_min = None, y_max = None, cosmo=True, m_cosmo = 0.15, 
-                                compare_to_mass = False, normalize_to_mass = False, ordering = None):
-        #m_N = 0.93
+    
+    
+    def plot_t_half_inv_scatter(self, #
+                                vary_WC = "m_min", 
+                                vary_phases = True, 
+                                vary_LECs=False, 
+                                experiments=None, 
+                                n_dots=10000, 
+                                save = False, 
+                                file="t_half_scatter.png", 
+                                alpha_plot=1, 
+                                isotope = "76Ge", 
+                                x_min=1e-4, 
+                                x_max = 1, 
+                                y_min = None,
+                                y_max = None, 
+                                cosmo=True,
+                                m_cosmo = 0.15, 
+                                compare_to_mass = False,
+                                normalize_to_mass = False, 
+                                ordering = None,
+                                alpha_mass = 0.05, 
+                                return_points = False, 
+                                markersize = 0.15):
+        if vary_WC == "m_sum":
+            x_min = np.max([x_min, f.m_min_to_m_sum(0)["NO"]])
+            x_max = np.max([x_max, f.m_min_to_m_sum(0)["NO"]])
+            Msum = np.logspace(np.log10(x_min), np.log10(x_max), n_dots)
+            #print(Msum)
+            mspace = Msum.copy()
+            for idx in range(n_dots):
+                mspace[idx] = f.m_sum_to_m_min(Msum[idx])["NO"]
+            #x_min = np.max([f.m_sum_to_m_min(x_min)["NO"], 1e-10])
+            #x_max = np.max([f.m_sum_to_m_min(x_max)["NO"], 1e-10])
+            #Msum = np.logspace(x_min, x_max, n_dots)
+            
+            #print(x_min)
+            #print(x_max)
+        
+        #M = np.logspace(int(np.log10(x_min)),int(np.log10(x_max)), n_dots)
+        else:
+            mspace = np.logspace((np.log10(x_min)),(np.log10(x_max)), n_dots)
+        
+        
         n_points = n_dots
         if vary_WC not in ["m_bb", "m_min", "m_sum"] and compare_to_mass:
             warnings.warn("comparing to mass mechanism only makes sense if you put either the minimal neutrino mass m_min, the sum of neutrino masses m_sum or m_bb on the x axis. Setting compare_to_mass = False")
             compare_to_mass = False
-        #element_name = "76Ge"
-        LECs = { 'Tprime': 1,
-                 'Tpipi': 1,
-                 '1piN': 1,
-                 '6piN': 1,
-                 '7piN': 1,
-                 '8piN': 1,
-                 '9piN': 1,
-                 'VLpiN': 1,
-                 'TpiN': 1,
-                 '1NN': 1,
-                 '6NN': 1,
-                 '7NN': 1,
-                 'VLNN': 1,
-                 'TNN': 1,
-                 'VLE': 1,
-                 'VLme': 1,
-                 'VRE': 1,
-                 'VRme': 1,
-                 '2NN': 157.91367041742973,
-                 '3NN': 157.91367041742973,
-                 '4NN': 157.91367041742973,
-                 '5NN': 157.91367041742973,
-                 'nuNN': -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6}
+        
         
         
         if compare_to_mass:
@@ -4213,12 +4021,13 @@ class LEFT(object):
         #forbidden_LECsNOm = []
         #forbidden_LECsIO = []
         #forbidden_LECsIOm = []
-        if vary_WC != "m_min":
+        if vary_WC not in ["m_min", "m_sum"]:
             WC_backup = self.WC[vary_WC]
         m_backup = self.WC["m_bb"]
         LEC_backup = self.LEC.copy()
         for x in range(n_points):
-            if vary_WC == "m_min":
+            if vary_WC in ["m_min", "m_sum"]:
+                m_min = np.random.choice(mspace)
                 m_min = np.random.choice(mspace)
             #for n_m_min in range(10):
             #    for n_LECs in range(10):
@@ -4237,14 +4046,7 @@ class LEFT(object):
                     alpha = np.pi*np.random.rand()
                     self.WC[vary_WC] *= np.exp(1j*alpha)
             if vary_LECs == True:
-                for LEC in LECs:
-                    if LEC == "nuNN":
-                        random_LEC = (np.random.rand()+0.5)*LECs[LEC]
-                        self.LEC[LEC] = random_LEC
-                    else:
-                        #random_LEC = variation_range*2*(np.random.rand()-0.5)*LECs[LEC]
-                        random_LEC = np.random.choice([1,-1])*((np.sqrt(10)-1/np.sqrt(10))*np.random.rand()+1/np.sqrt(10))*LECs[LEC]
-                        self.LEC[LEC] = random_LEC
+                self._vary_LECs(inplace = True)
 
             t = self.t_half(isotope)
             #M3 = model.amplitudes(element_name, model.WC)[1]["nu(3)"]
@@ -4254,7 +4056,7 @@ class LEFT(object):
             #    forbidden_LECsNOm.append(m_min)
             
             points[x][1] = 1/t
-            if normalize_to_mass and vary_WC in ["m_min", "m_bb"]:
+            if normalize_to_mass and vary_WC in ["m_min", "m_bb", "m_sum"]:
                 WC_backup = self.WC.copy()
                 for operator in self.WC:
                     if operator != "m_bb":
@@ -4262,7 +4064,7 @@ class LEFT(object):
                 t_half_mbb = self.t_half(isotope)
                 self.WC = WC_backup.copy()
                 points[x][1] *= t_half_mbb
-            if vary_WC == "m_min":
+            if vary_WC in ["m_min", "m_sum"]:
                 self.WC["m_bb"] = mIO
                 #for LEC in LECs:
                 #    random_LEC = 3*2*(np.random.rand()-0.5)*LECs[LEC]
@@ -4275,10 +4077,14 @@ class LEFT(object):
                 #    forbidden_LECsIOm.append(m_min)
                 #M3 = model.amplitudes(element_name, model.WC)[1]["nu(3)"]
                 #m_effIO = np.absolute(m_e / (g_A**2*V_ud**2*M3*G01**(1/2)) * t**(-1/2))*1e+9
-                pointsIO[x][0] = m_min
+                if vary_WC == "m_sum":
+                    pointsIO[x][0] = msumIO
+                    points[x][0] = msum
+                else:
+                    pointsIO[x][0] = m_min
+                    points[x][0] = m_min
                 pointsIO[x][1] = 1/tIO
-                points[x][0] = m_min
-                if normalize_to_mass and vary_WC in ["m_min", "m_bb"]:
+                if normalize_to_mass and vary_WC in ["m_min", "m_bb", "m_sum"]:
                     WC_backup = self.WC.copy()
                     for operator in self.WC:
                         if operator != "m_bb":
@@ -4296,6 +4102,8 @@ class LEFT(object):
         self.LEC = LEC_backup.copy()
         if vary_WC == "m_min":
             plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
+        elif vary_WC == "m_sum":
+            plt.xlabel(r"$\sum_i m_{i}$ [eV]", fontsize=20)
         else:
             if vary_WC == "m_bb":
                 plt.xlabel(r"$|m_{\beta\beta}|$ [eV]", fontsize=20)
@@ -4320,23 +4128,30 @@ class LEFT(object):
             
         if compare_to_mass:
             if ordering == "NO":
-                plt.plot(M_mbb,NO_min_mbb, "grey")
-                plt.plot(M_mbb,NO_max_mbb, "grey")
-                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, color="k", alpha=0.1, label = r"$m_{\beta\beta}$")
+                plt.plot(M_mbb,NO_min_mbb, "k", linewidth = 1)
+                plt.plot(M_mbb,NO_max_mbb, "k", linewidth = 1)
+                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, color="k", alpha=alpha_mass, label = r"$m_{\beta\beta}$")
                 
             elif ordering == "IO":
-                plt.plot(M_mbb,IO_min_mbb, "grey")
-                plt.plot(M_mbb,IO_max_mbb, "grey")
-                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, color="k", alpha=0.1, label=r"$m_{\beta\beta}$")
+                plt.plot(M_mbb,IO_min_mbb, "k", linewidth = 1)
+                plt.plot(M_mbb,IO_max_mbb, "k", linewidth = 1)
+                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, color="k", alpha=alpha_mass, label=r"$m_{\beta\beta}$")
             else:
-                plt.plot(M_mbb,NO_min_mbb, "grey")
-                plt.plot(M_mbb,NO_max_mbb, "grey")
-                plt.plot(M_mbb,IO_min_mbb, "grey")
-                plt.plot(M_mbb,IO_max_mbb, "grey")
-                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, color="k", alpha=0.1, label=r"$m_{\beta\beta}$")
-                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, color="k", alpha=0.1)
-        plt.plot(points[:,0],points[:,1], "b.", alpha = alpha_plot, markersize = 0.15)
-        plt.plot(pointsIO[:,0],pointsIO[:,1], "r.", alpha = alpha_plot, markersize = 0.15)
+                plt.plot(M_mbb,NO_min_mbb, "k", linewidth = 1)
+                plt.plot(M_mbb,NO_max_mbb, "k", linewidth = 1)
+                plt.plot(M_mbb,IO_min_mbb, "k", linewidth = 1)
+                plt.plot(M_mbb,IO_max_mbb, "k", linewidth = 1)
+                plt.fill_between(M_mbb, IO_max_mbb, IO_min_mbb, #color="k", alpha=alpha_mass, 
+                                 facecolor=(0,0,0,alpha_mass), 
+                                 linewidth = 1, 
+                                 edgecolor = (0,0,0,1),
+                                 label=r"$m_{\beta\beta}$")
+                plt.fill_between(M_mbb, NO_max_mbb, NO_min_mbb, #color="k", alpha=alpha_mass
+                                 facecolor=(0,0,0,alpha_mass), 
+                                 linewidth = 1, 
+                                 edgecolor = (0,0,0,1))
+        plt.plot(points[:,0],points[:,1], "b.", alpha = alpha_plot, markersize = markersize)
+        plt.plot(pointsIO[:,0],pointsIO[:,1], "r.", alpha = alpha_plot, markersize = markersize)
         plt.yscale("log")
         plt.xscale("log")
         if normalize_to_mass:
@@ -4346,7 +4161,9 @@ class LEFT(object):
         #plt.xlabel(r"$m_{min}$ [eV]", fontsize=20)
         plt.xlim(x_min,x_max)
         plt.ylim(y_min,y_max)
-        if vary_WC == "m_min":
+        if vary_WC in ["m_min", "m_sum"]:
+            plt.legend(fontsize=20)
+        if vary_WC in ["m_min", "m_sum"]:
             legend_elements = [Line2D([0], [0], marker='o', color='w', label='NO',
                                   markerfacecolor='b', markersize=10),
                            Line2D([0], [0], marker='o', color='w', label='IO',
@@ -4358,8 +4175,12 @@ class LEFT(object):
                 plt.axhline(experiments[experiment], label )
                 plt.text(x = 1e-3, y = experiments[experiment], s = experiment)
         #return(forbidden_LECsNO, forbidden_LECsNOm, forbidden_LECsIO, forbidden_LECsIOm)
-        if savefig == True:
+        if save == True:
             plt.savefig(file)
+        if return_points:
+            points = {"NO"     : points,
+                      "IO"     : pointsIO}
+            return(fig, points)
         return(fig)
     
     def generate_formula(self, isotope, WC = None, method = None, decimal = 2, output = "latex"):
@@ -4426,8 +4247,8 @@ class SMEFT(object):
         self.vev = 246
         
         
-        if scale <=80:
-            raise ValueError("scale must be greater than 80")
+        if scale <=m_W:
+            raise ValueError("scale must be greater than m_W = 80GeV")
         self.method = method                       #NME method
         self.name = name                           #Model name
         self.m_Z = 91                              #Z-Boson Mass in GeV
@@ -4487,16 +4308,18 @@ class SMEFT(object):
         #
         ########################################################
         if unknown_LECs == True:
-            self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
-                       "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
-                       # all the below are expected to be order 1 in absolute magnitude
-                       "Tprime":1, "Tpipi":1, "1piN":1, "6piN":1, "7piN":1, "8piN":1, "9piN":1, "VLpiN":1, "TpiN":1, 
-                       "1NN":1, "6NN":1, "7NN":1, "VLNN":1, "TNN": 1, "VLE":1, "VLme":1, "VRE":1, "VRme":1, 
-                       # all the below are expected to be order (4pi)**2 in absolute magnitude
-                       "2NN":(4*np.pi)**2, "3NN":(4*np.pi)**2, "4NN":(4*np.pi)**2, "5NN":(4*np.pi)**2, 
-                       # expected to be 1/F_pipi**2 pion decay constant
-                       "nuNN": -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
-                      }
+            #self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
+            #           "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
+            #           # all the below are expected to be order 1 in absolute magnitude
+            #           "Tprime":1, "Tpipi":1, "1piN":1, "6piN":1, "7piN":1, "8piN":1, "9piN":1, "VLpiN":1, "TpiN":1, 
+            #           "1NN":1, "6NN":1, "7NN":1, "VLNN":1, "TNN": 1, "VLE":1, "VLme":1, "VRE":1, "VRme":1, 
+            #           # all the below are expected to be order (4pi)**2 in absolute magnitude
+            #           "2NN":(4*np.pi)**2, "3NN":(4*np.pi)**2, "4NN":(4*np.pi)**2, "5NN":(4*np.pi)**2, 
+            #           # expected to be 1/F_pipi**2 pion decay constant
+            #           "nuNN": -1/(4*np.pi) * (self.m_N*1.27**2/(4*0.0922**2))**2*0.6
+            #          }
+            
+            self.LEC = LECs
             
             self.LEC["VpiN"] = self.LEC["6piN"] + self.LEC["8piN"]
             self.LEC["tildeVpiN"] = self.LEC["7piN"] + self.LEC["9piN"]
@@ -4505,8 +4328,8 @@ class SMEFT(object):
             self.LEC = {"A":1.271, "S":0.97, "M":4.7, "T":0.99, "B":2.7, "1pipi":0.36, 
                        "2pipi":2.0, "3pipi":-0.62, "4pipi":-1.9, "5pipi":-8, 
                        # all the below are expected to be order 1 in absolute magnitude
-                       "Tprime":1, "Tpipi":0, "1piN":1, "6piN":0, "7piN":0, "8piN":0, "9piN":0, "VLpiN":0, "TpiN":0, 
-                       "1NN":1, "6NN":1, "7NN":1, "VLNN":0, "TNN": 0, "VLE":0, "VLme":0, "VRE":0, "VRme":0, 
+                       "Tprime":0, "Tpipi":0, "1piN":0, "6piN":0, "7piN":0, "8piN":0, "9piN":0, "VLpiN":0, "TpiN":0, 
+                       "1NN":0, "6NN":1, "7NN":1, "VLNN":0, "TNN": 0, "VLE":0, "VLme":0, "VRE":0, "VRme":0, 
                        # all the below are expected to be order (4pi)**2 in absolute magnitude
                        "2NN":0, "3NN":0, "4NN":0, "5NN":0, 
                        # expected to be 1/F_pipi**2 pion decay constant
@@ -4624,7 +4447,7 @@ class SMEFT(object):
                              -  1/2 * self.alpha2(scale))*C
         return(rge)
     
-    def C_LLduD1(self, final_scale = 80, initial_scale = None):
+    def C_LLduD1(self, final_scale = m_W, initial_scale = None):
         if initial_scale == None:
             initial_scale = self.scale
         C = integrate.solve_ivp(self.RGELLduD1, [np.log(initial_scale), np.log(final_scale)], [self.SMEFT_WCs["LLduD1(7)"]]).y[0][-1]
@@ -4639,7 +4462,7 @@ class SMEFT(object):
                              +    9 * self.alpha_t(scale))*C
         return(rge)
     
-    def C_LHDe(self, final_scale = 80, initial_scale = None):
+    def C_LHDe(self, final_scale = m_W, initial_scale = None):
         if initial_scale == None:
             initial_scale = self.scale
         C = integrate.solve_ivp(self.RGELHDe, [np.log(initial_scale), np.log(final_scale)], [self.SMEFT_WCs["LHDe(7)"]]).y[0][-1]
@@ -4654,7 +4477,7 @@ class SMEFT(object):
                              +     9 * self.alpha_t(scale))*C
         return(rge)
     
-    def C_LeudH(self, final_scale = 80, initial_scale = None):
+    def C_LeudH(self, final_scale = m_W, initial_scale = None):
         if initial_scale == None:
             initial_scale = self.scale
         C = integrate.solve_ivp(self.RGELeudH, [np.log(initial_scale), np.log(final_scale)], [self.SMEFT_WCs["LeudH(7)"]]).y[0][-1]
@@ -4670,7 +4493,7 @@ class SMEFT(object):
                              +    3 * self.alpha_t(scale))*C
         return(rge)
     
-    def C_LLQuH(self, final_scale = 80, initial_scale = None):
+    def C_LLQuH(self, final_scale = m_W, initial_scale = None):
         if initial_scale == None:
             initial_scale = self.scale
         C = integrate.solve_ivp(self.RGELLQuH, [np.log(initial_scale), np.log(final_scale)], [self.SMEFT_WCs["LLQuH(7)"]]).y[0][-1]
@@ -4700,14 +4523,13 @@ class SMEFT(object):
         
         return(np.dot(rge, C))
     
-    def C_LLQdH1(self, final_scale = 80, initial_scale = None):
+    def C_LLQdH1(self, final_scale = m_W, initial_scale = None):
         if initial_scale == None:
             initial_scale = self.scale
         C0 = [self.SMEFT_WCs["LLQdH1(7)"], self.SMEFT_WCs["LLQdH2(7)"]]
         C = integrate.solve_ivp(self.RGELLQdH12, [np.log(initial_scale), np.log(final_scale)], C0).y[0][-1]
         return(C) 
     
-    def C_LLQdH2(self, final_scale = 80, initial_scale = None):
         if initial_scale == None:
             initial_scale = self.scale
         C0 = [self.SMEFT_WCs["LLQdH1(7)"], self.SMEFT_WCs["LLQdH2(7)"]]
@@ -4753,21 +4575,21 @@ class SMEFT(object):
         
         return(np.dot(rge, C))
     
-    def C_LHD1(self, final_scale = 80, initial_scale = None):
+    def C_LHD1(self, final_scale = m_W, initial_scale = None):
         if initial_scale == None:
             initial_scale = self.scale
         C0 = [self.SMEFT_WCs["LHD1(7)"], self.SMEFT_WCs["LHD2(7)"], self.SMEFT_WCs["LHW(7)"]]
         C = integrate.solve_ivp(self.RGE_LHD1_LHD2_LHW, [np.log(initial_scale), np.log(final_scale)], C0).y[0][-1]
         return(C)
     
-    def C_LHD2(self, final_scale = 80, initial_scale = None):
+    def C_LHD2(self, final_scale = m_W, initial_scale = None):
         if initial_scale == None:
             initial_scale = self.scale
         C0 = [self.SMEFT_WCs["LHD1(7)"], self.SMEFT_WCs["LHD2(7)"], self.SMEFT_WCs["LHW(7)"]]
         C = integrate.solve_ivp(self.RGE_LHD1_LHD2_LHW, [np.log(initial_scale), np.log(final_scale)], C0).y[1][-1]
         return(C)
     
-    def C_LHW(self, final_scale = 80, initial_scale = None):
+    def C_LHW(self, final_scale = m_W, initial_scale = None):
         if initial_scale == None:
             initial_scale = self.scale
         C0 = [self.SMEFT_WCs["LHD1(7)"], self.SMEFT_WCs["LHD2(7)"], self.SMEFT_WCs["LHW(7)"]]
@@ -4776,7 +4598,7 @@ class SMEFT(object):
         #print(C)
         return(C)
     
-    def run(self, final_scale = 80, initial_scale = None, WC = None, inplace = False):
+    def run(self, final_scale = m_W, initial_scale = None, WC = None, inplace = False):
         if initial_scale == None:
             initial_scale = self.scale
         if WC == None:
@@ -5042,7 +4864,6 @@ class SMEFT(object):
             method = self.method
         else:
             pass
-        vev = 246
         #make a backup of WCs
         WC = self.SMEFT_WCs.copy()
         half_life = hl
@@ -5132,22 +4953,22 @@ class SMEFT(object):
         return(result, scales)#, scale)
     
     def ratios(self, reference_isotope = "76Ge", normalized = True, 
-               WC = None, method=None, vary = False, n_points = 100):
+               WC = None, method=None, vary_LECs = False, n_points = 100):
         
         model = self.generate_LEFT_model(WC, method, LEC = None)
         
         return(model.ratios(reference_isotope = reference_isotope, 
-                            normalized = normalized, vary = vary, 
+                            normalized = normalized, vary_LECs = vary_LECs, 
                             n_points = n_points))
     
     def plot_ratios(self, reference_isotope = "76Ge", normalized = True, 
-                    WC = None, method=None, vary = False, n_points = 100, 
+                    WC = None, method=None, vary_LECs = False, n_points = 100, 
                     color = "b", addgrid = True, savefig = False, file = "ratios.png"):
         
         model = self.generate_LEFT_model(WC, method, LEC = None)
         
         return(model.plot_ratios(reference_isotope = reference_isotope, 
-                                 normalized = normalized, vary = vary, 
+                                 normalized = normalized, vary_LECs = vary_LECs, 
                                  n_points = n_points, color = color,
                                  addgrid = addgrid, savefig = savefig, 
                                  file = file))

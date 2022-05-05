@@ -237,16 +237,16 @@ if path_option == "Define a model":
         st.pyplot(fig_spec)
         st.subheader("Half-life ratios")
         reference_isotope = st.selectbox("Choose the reference isotope:", options = LEFT_model.isotope_names, index = ge_idx)
-        ratio_option_cols = st.beta_columns(2)
+        ratio_option_cols = st.columns(2)
         compare = ratio_option_cols[0].checkbox("Compare to mass mechanism?", help = "If you check this box we will normalize the ratios to the mass mechanisms ratio values")
-        vary = ratio_option_cols[1].checkbox("Vary unknown LECs?", help = "If you check this box we will vary all unknown LECs around their order of magnitude estimate O (i.e. from log_10(O) to log10(O+1)) . g_nuNN will be varied 50% around it's theoretical estimate.")
-        if vary:
+        vary_LECs = ratio_option_cols[1].checkbox("Vary unknown LECs?", help = "If you check this box we will vary all unknown LECs around their order of magnitude estimate O (i.e. from log_10(O) to log10(O+1)) . g_nuNN will be varied 50% around it's theoretical estimate.")
+        if vary_LECs:
             n_points = st.number_input("How many variations do you want to run? Remember: The higher this number the longer the calculation takes..." , value=100)
         else:
             n_points = 1
         #fig = LEFT_model.ratios(plot=True, vary = vary, n_points = n_points, 
         #                        normalized = compare, reference_isotope = reference_isotope)
-        fig = LEFT_model.plot_ratios(vary = vary, n_points = n_points, 
+        fig = LEFT_model.plot_ratios(vary_LECs = vary_LECs, n_points = n_points, 
                                 normalized = compare, reference_isotope = reference_isotope)
         st.pyplot(fig)
         st.subheader("Vary single Wilson coefficients")
@@ -258,7 +258,7 @@ if path_option == "Define a model":
             if plotoptions in ["m_eff", "half_life", "1/half_life"]:
 
                 ge_idx = int(np.where(LEFT_model.isotope_names=="76Ge")[0][0])
-                plot_cols = st.beta_columns(3)
+                plot_cols = st.columns(3)
                 plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], key = "plottype"+str(plotidx), help = "Scatter plots vary all the relevant parameters and generate a number of scenarios while line plots calculate the minimum and maximum by running an optimization algorithm. If you want to vary also the LECs you will need to choose scatter plots.")
                 vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min", "m_sum"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx), help = "Choose the Wilson coefficient you want to vary on the x-axis")
@@ -266,7 +266,7 @@ if path_option == "Define a model":
                 m_cosmo = 0.15
                 #show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions)
                 if scatter_or_line == "Line":
-                    xlim_cols = st.beta_columns(3)
+                    xlim_cols = st.columns(3)
                     if vary_WC == "m_min":
                         x_min = 10**xlim_cols[0].number_input("Minimum m_min 10^...[eV]", value = -4., key = "xmin"+str(plotidx), help = "This sets the minimum limit on the x axis as 10^a. Preset: a=-4")
                         x_max = 10**xlim_cols[1].number_input("Maximum m_min 10^...[meV]", value = 0., key = "xmax"+str(plotidx), help = "This sets the maximum limit on the x axis as 10^a. Preset: a=0")
@@ -286,11 +286,11 @@ if path_option == "Define a model":
                         x_min = 10**xlim_cols[0].number_input("Minimum C_"+vary_WC+" 10^...", value = -7., key = "xmin"+str(plotidx), help = "This sets the maximum limit on the x axis as 10^a. Preset: a=0")
                         x_max = 10**xlim_cols[1].number_input("Maximum C_"+vary_WC+" 10^...", value = -2., key = "xmax"+str(plotidx), help = "This sets the maximum limit on the x axis as 10^a. Preset: a=0")
                     choose_ylim = xlim_cols[2].checkbox("Set y-axis limits", help = "You can either let the code choose the y-axis limits or choose them yourself by checking this box.", key = "ylim checkbox"+str(plotidx))
-                    ylim_cols = st.beta_columns(2)
+                    ylim_cols = st.columns(2)
                     y_min =  None
                     y_max = None
                     if choose_ylim:
-                        ylim_cols = st.beta_columns(3)
+                        ylim_cols = st.columns(3)
                         y_min = 10**ylim_cols[0].number_input("Minimum y-axis limit exponent", value = -4., key = "ymin"+str(plotidx), help = "This sets the minimum limit on the x axis as 10^a. Preset: a=-4")
                         y_max = 10**ylim_cols[1].number_input("Maximum m_min exponent [meV]", value = 0., key = "ymax"+str(plotidx), help = "This sets the maximum limit on the x axis as 10^a. Preset: a=0")
                         
@@ -298,10 +298,10 @@ if path_option == "Define a model":
                     normalize_to_mass = False
                     show_cosmo = False
                     if vary_WC == "m_min":
-                        option_cols = st.beta_columns(2)
+                        option_cols = st.columns(2)
                         compare_to_mass = option_cols[0].checkbox("Compare to mass mechanism?", key =plotoptions+"3"+str(plotidx), value=False, help = "If you check this box we will plot the contribution of the standard mass mechanism for comparison.")
                         normalize_to_mass = option_cols[1].checkbox("Normalize to mass mechanism?", key =plotoptions+"3"+str(plotidx), value=False, help = "If you check this box we will normalize the y-axis with respect to the contributions of the standard mass mechanism.")
-                        cosmo_options = st.beta_columns(2)
+                        cosmo_options = st.columns(2)
                         show_cosmo = cosmo_options[0].checkbox("Show cosmology limit?", key =plotoptions+str(plotidx), help = "This plots a grey area excluded from cosmology limits on the sum of neutrino masses translated to the corresponding minimal neutrino mass in normal ordering.")
                         m_cosmo = 0.15
                         if show_cosmo:
@@ -328,7 +328,7 @@ if path_option == "Define a model":
                                                     x_min = x_min, x_max = x_max, 
                                                     y_min = y_min, y_max = y_max)
                 else:
-                    xlim_cols = st.beta_columns(3)
+                    xlim_cols = st.columns(3)
                     if vary_WC == "m_min":
                         x_min = 10**xlim_cols[0].number_input("Minimum m_min exponent [eV]", value = -4, key = "xmin"+str(plotidx))
                         x_max = 10**xlim_cols[1].number_input("Maximum m_min exponent [meV]", value = 0, key = "xmax"+str(plotidx))
@@ -344,10 +344,10 @@ if path_option == "Define a model":
                     else:
                         x_min = xlim_cols[0].number_input("Minimum C_"+vary_WC+" [1e-6]", value = 0.1, key = "xmin"+str(plotidx))*1e-6
                         x_max = xlim_cols[1].number_input("Maximum C_"+vary_WC+" [1e-6]", value = 1000., key = "xmax"+str(plotidx))*1e-6
-                    option_cols = st.beta_columns(4)
+                    option_cols = st.columns(4)
                     vary_LECs = option_cols[0].checkbox("Vary unknown LECs?", key =plotoptions+"1"+str(plotidx), help = "If you check this box we will vary all unknown LECs around their order of magnitude estimate O (i.e. from 1/sqrt(10) to sqrt(10) times the estimate . g_nuNN will be varied 50% around it's theoretical estimate.")
                     vary_phases = option_cols[1].checkbox("Vary phase?", key =plotoptions+"2"+str(plotidx), value=True, help = "If you check this box we will vary the complex phase of the operator chosen for the x-axis.")
-                    n_points = xlim_cols[2].number_input("Number of points", value = 10000, key =plotoptions+"npoints"+str(plotidx))
+                    n_points = xlim_cols[2].number_input("Number of points", value = 10000, step = 1, min_value = 0, key =plotoptions+"npoints"+str(plotidx))
                         
                     compare_to_mass = False
                     normalize_to_mass = False
@@ -355,7 +355,7 @@ if path_option == "Define a model":
                     if vary_WC == "m_min":
                         compare_to_mass = option_cols[2].checkbox("Compare to mass mechanism?", key =plotoptions+"3"+str(plotidx), value=False, help = "If you check this box we will plot the contribution of the standard mass mechanism for comparison.")
                         normalize_to_mass = option_cols[3].checkbox("Normalize to mass mechanism?", key =plotoptions+"3"+str(plotidx), value=False, help = "If you check this box we will normalize the y-axis with respect to the contributions of the standard mass mechanism.")
-                        cosmo_options = st.beta_columns(2)
+                        cosmo_options = st.columns(2)
                         show_cosmo = cosmo_options[0].checkbox("Show cosmology limit?", key =plotoptions+str(plotidx), help = "This plots a grey area excluded from cosmology limits on the sum of neutrino masses translated to the corresponding minimal neutrino mass in normal ordering.")
                         if show_cosmo:
                             m_cosmo = cosmo_options[1].number_input("Limit on the sum of neutrino masses [meV]", help="Preset limit: S.R. Choudhury and S. Hannestad, 2019, arxiv:1907.12598", value = 150, key = "m_cosmo"+str(plotidx))*1e-3
@@ -364,19 +364,22 @@ if path_option == "Define a model":
                                                             compare_to_mass = compare_to_mass, n_dots = n_points, 
                                                             normalize_to_mass = normalize_to_mass,
                                                             cosmo=show_cosmo, m_cosmo = m_cosmo, isotope = plot_isotope, 
-                                                            vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)#, compare_to_mass = compare_to_mass, normalize_to_mass = normalize_to_mass)
+                                                            vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)
+                        
                     if plotoptions == "half_life":
                         fig = LEFT_model.plot_t_half_scatter(vary_WC = vary_WC, vary_phases = vary_phases, 
                                                             compare_to_mass = compare_to_mass, n_dots = n_points, 
                                                             normalize_to_mass = normalize_to_mass,
                                                             cosmo=show_cosmo, m_cosmo = m_cosmo, isotope = plot_isotope, 
-                                                            vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)#, compare_to_mass = compare_to_mass, normalize_to_mass = normalize_to_mass)
+                                                            vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)
+                        
                     if plotoptions == "1/half_life":
                         fig = LEFT_model.plot_t_half_inv_scatter(vary_WC = vary_WC, vary_phases = vary_phases, 
                                                             compare_to_mass = compare_to_mass, n_dots = n_points, 
                                                             normalize_to_mass = normalize_to_mass,
                                                             cosmo=show_cosmo, m_cosmo = m_cosmo, isotope = plot_isotope, 
-                                                            vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)#, compare_to_mass = compare_to_mass, normalize_to_mass = normalize_to_mass)
+                                                            vary_LECs=vary_LECs, x_min = x_min, x_max = x_max)
+                        
 
                 st.pyplot(fig)
             return(plotoptions)
@@ -549,14 +552,14 @@ if path_option == "Define a model":
         st.pyplot(fig_spec)
         st.subheader("Half-life ratios")
         reference_isotope = st.selectbox("Choose the reference isotope:", options = LEFT_model.isotope_names, index = ge_idx)
-        ratio_option_cols = st.beta_columns(2)
+        ratio_option_cols = st.columns(2)
         compare = ratio_option_cols[0].checkbox("Compare to mass mechanism?")
-        vary = ratio_option_cols[1].checkbox("Vary unknown LECs?")
-        if vary:
+        vary_LECs = ratio_option_cols[1].checkbox("Vary unknown LECs?")
+        if vary_LECs:
             n_points = st.number_input("How many variations do you want to run? Remember: The higher this number the longer the calculation takes..." , value=100)
         else:
             n_points = 1
-        fig = LEFT_model.ratios(plot=True, vary = vary, n_points = n_points, 
+        fig = LEFT_model.ratios(plot=True, vary_LECs = vary_LECs, n_points = n_points, 
                                 normalized = compare, reference_isotope = reference_isotope)
         st.pyplot(fig)
         st.subheader("Vary single Wilson coefficients")
@@ -567,7 +570,7 @@ if path_option == "Define a model":
             if plotoptions == "m_eff":
 
                 ge_idx = int(np.where(LEFT_model.isotope_names=="76Ge")[0][0])
-                plot_cols = st.beta_columns(3)
+                plot_cols = st.columns(3)
                 plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], key = "plottype"+str(plotidx))
                 vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min", "m_sum"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx))
@@ -578,7 +581,7 @@ if path_option == "Define a model":
                     show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions + str(plotidx), help = "This plots a grey area excluded from cosmology limits on the sum of neutrino masses translated to the corresponding minimal neutrino mass in normal ordering.")
                     fig = LEFT_model.plot_m_eff(cosmo=show_cosmo, isotope = plot_isotope)
                 else:
-                    xlim_cols = st.beta_columns(2)
+                    xlim_cols = st.columns(2)
                     if vary_WC == "m_min":
                         x_min = xlim_cols[0].number_input("Minimum m_min [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
                         x_max = xlim_cols[1].number_input("Maximum m_min [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
@@ -594,7 +597,7 @@ if path_option == "Define a model":
                     else:
                         x_min = xlim_cols[0].number_input("Minimum C_"+vary_WC+" [1e-6]", value = 0.1, key = "xmin"+str(plotidx))*1e-6
                         x_max = xlim_cols[1].number_input("Maximum C_"+vary_WC+" [1e-6]", value = 1000., key = "xmax"+str(plotidx))*1e-6
-                    option_cols = st.beta_columns(2)
+                    option_cols = st.columns(2)
                     vary_LECs = option_cols[0].checkbox("Vary unknown LECs?", key =plotoptions+"1"+str(plotidx), help = "If you check this box we will vary all unknown LECs around their order of magnitude estimate O (i.e. from log_10(O) to log10(O+1)) . g_nuNN will be varied 50% around it's theoretical estimate.")
                     vary_phases = option_cols[1].checkbox("Vary phase?", key =plotoptions+"2"+str(plotidx), value=True, help = "If you check this box we will vary the complex phase of the operator chosen for the x-axis.")
                     
@@ -603,7 +606,7 @@ if path_option == "Define a model":
                     normalize_to_mass = False
                     show_cosmo = False
                     if vary_WC == "m_min":
-                        cosmo_options = st.beta_columns(2)
+                        cosmo_options = st.columns(2)
                         show_cosmo = cosmo_options[0].checkbox("Show cosmology limit?", key =plotoptions+str(plotidx), help = "This plots a grey area excluded from cosmology limits on the sum of neutrino masses translated to the corresponding minimal neutrino mass in normal ordering.")
                         if show_cosmo:
                             m_cosmo = cosmo_options[1].number_input("Limit on the sum of neutrino masses [meV]", help="Preset limit: S.R. Choudhury and S. Hannestad, 2019, arxiv:1907.12598", value = 150, key = "m_cosmo"+str(plotidx))*1e-3
@@ -614,7 +617,7 @@ if path_option == "Define a model":
                 st.pyplot(fig)
             elif plotoptions == "half_life":
                 ge_idx = int(np.where(LEFT_model.isotope_names=="76Ge")[0][0])
-                plot_cols = st.beta_columns(3)
+                plot_cols = st.columns(3)
                 plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.isotope_names, index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], key = "plottype"+str(plotidx))
                 vary_WC = plot_cols[2].selectbox("X-axis WC", options = np.append(["m_min", "m_sum"], np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.values()))!=0]), key = "vary"+str(plotidx))
@@ -624,7 +627,7 @@ if path_option == "Define a model":
                     show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions+str(plotidx), help = "This plots a grey area excluded from cosmology limits on the sum of neutrino masses translated to the corresponding minimal neutrino mass in normal ordering.")
                     fig = LEFT_model.plot_t_half(cosmo=show_cosmo, isotope = plot_isotope)
                 else:
-                    xlim_cols = st.beta_columns(2)
+                    xlim_cols = st.columns(2)
                     if vary_WC == "m_min":
                         x_min = xlim_cols[0].number_input("Minimum m_min [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
                         x_max = xlim_cols[1].number_input("Maximum m_min [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
@@ -640,7 +643,7 @@ if path_option == "Define a model":
                     else:
                         x_min = xlim_cols[0].number_input("Minimum C_"+vary_WC+" [1e-6]", value = 0.1, key = "xmin"+str(plotidx))*1e-6
                         x_max = xlim_cols[1].number_input("Maximum C_"+vary_WC+" [1e-6]", value = 1000., key = "xmax"+str(plotidx))*1e-6
-                    option_cols = st.beta_columns(2)
+                    option_cols = st.columns(2)
                     vary_LECs = option_cols[0].checkbox("Vary unknown LECs?", key =plotoptions+"1"+str(plotidx), help = "If you check this box we will vary all unknown LECs around their order of magnitude estimate O (i.e. from log_10(O) to log10(O+1)) . g_nuNN will be varied 50% around it's theoretical estimate.")
                     vary_phases = option_cols[1].checkbox("Vary phase?", key =plotoptions+"2"+str(plotidx), value=True, help = "If you check this box we will vary the complex phase of the operator chosen for the x-axis.")
                     
@@ -649,7 +652,7 @@ if path_option == "Define a model":
                     normalize_to_mass = False
                     show_cosmo = False
                     if vary_WC == "m_min":
-                        cosmo_options = st.beta_columns(2)
+                        cosmo_options = st.columns(2)
                         show_cosmo = cosmo_options[0].checkbox("Show cosmology limit?", key =plotoptions+str(plotidx), help = "This plots a grey area excluded from cosmology limits on the sum of neutrino masses translated to the corresponding minimal neutrino mass in normal ordering.")
                         if show_cosmo:
                             m_cosmo = cosmo_options[1].number_input("Limit on the sum of neutrino masses [meV]", help="Preset limit: S.R. Choudhury and S. Hannestad, 2019, arxiv:1907.12598", value = 150, key = "m_cosmo"+str(plotidx))*1e-3
@@ -660,7 +663,7 @@ if path_option == "Define a model":
                 st.pyplot(fig)
             elif plotoptions == "1/half_life":
                 ge_idx = int(np.where(LEFT_model.isotope_names=="76Ge")[0][0])
-                plot_cols = st.beta_columns(3)
+                plot_cols = st.columns(3)
                 plot_isotope = plot_cols[0].selectbox("Choose an isotope:", options = LEFT_model.isotope_names, 
                                                       index = ge_idx, key = "isotope"+str(plotidx))
                 scatter_or_line = plot_cols[1].selectbox("Choose the plot-type", options = ["Scatter", "Line"], 
@@ -673,7 +676,7 @@ if path_option == "Define a model":
                     show_cosmo = st.checkbox("Show cosmology limit?", key =plotoptions, help = "This plots a grey area excluded from cosmology limits on the sum of neutrino masses translated to the corresponding minimal neutrino mass in normal ordering.")
                     fig = LEFT_model.plot_t_half_inv(cosmo=show_cosmo, isotope = plot_isotope)
                 else:
-                    xlim_cols = st.beta_columns(2)
+                    xlim_cols = st.columns(2)
                     if vary_WC == "m_min":
                         x_min = xlim_cols[0].number_input("Minimum m_min [meV]", value = 0.1, key = "xmin"+str(plotidx))*1e-3
                         x_max = xlim_cols[1].number_input("Maximum m_min [meV]", value = 1000., key = "xmax"+str(plotidx))*1e-3
@@ -689,7 +692,7 @@ if path_option == "Define a model":
                     else:
                         x_min = xlim_cols[0].number_input("Minimum C_"+vary_WC+" [1e-6]", value = 0.1, key = "xmin"+str(plotidx))*1e-6
                         x_max = xlim_cols[1].number_input("Maximum C_"+vary_WC+" [1e-6]", value = 1000., key = "xmax"+str(plotidx))*1e-6
-                    option_cols = st.beta_columns(2)
+                    option_cols = st.columns(2)
                     vary_LECs = option_cols[0].checkbox("Vary unknown LECs?", key =plotoptions+"1"+str(plotidx), help = "If you check this box we will vary all unknown LECs around their order of magnitude estimate O (i.e. from log_10(O) to log10(O+1)) . g_nuNN will be varied 50% around it's theoretical estimate.")
                     vary_phases = option_cols[1].checkbox("Vary phase?", key =plotoptions+"2"+str(plotidx), value=True, help = "If you check this box we will vary the complex phase of the operator chosen for the x-axis.")
                         
@@ -697,7 +700,7 @@ if path_option == "Define a model":
                     normalize_to_mass = False
                     show_cosmo = False
                     if vary_WC == "m_min":
-                        cosmo_options = st.beta_columns(2)
+                        cosmo_options = st.columns(2)
                         show_cosmo = cosmo_options[0].checkbox("Show cosmology limit?", key =plotoptions+str(plotidx), help = "This plots a grey area excluded from cosmology limits on the sum of neutrino masses translated to the corresponding minimal neutrino mass in normal ordering.")
                         if show_cosmo:
                             m_cosmo = cosmo_options[1].number_input("Limit on the sum of neutrino masses [meV]", help="Preset limit: S.R. Choudhury and S. Hannestad, 2019, arxiv:1907.12598", value = 150, key = "m_cosmo"+str(plotidx))*1e-3
@@ -828,12 +831,12 @@ elif path_option == "Study operator limits":
                 checkbox_experiments[experiment] = experiments[experiment]
                 counter += 1
                 
-        cols1 = st.beta_columns(8)
+        cols1 = st.columns(8)
         if counter > 8:
-            cols2 = st.beta_columns(8)
+            cols2 = st.columns(8)
         
         if counter > 16:
-            cols3 = st.beta_columns(8)
+            cols3 = st.columns(8)
             
         idx = 0
         for experiment in checkbox_experiments:
@@ -873,24 +876,24 @@ elif path_option == "Study operator limits":
                     checkbox_experiments[experiment] = experiments[experiment]
                     counter += 1
 
-            cols1 = st.beta_columns(8)
+            cols1 = st.columns(8)
             if counter > 8:
-                cols2 = st.beta_columns(8)
+                cols2 = st.columns(8)
 
             if counter > 16:
-                cols3 = st.beta_columns(8)
+                cols3 = st.columns(8)
 
             for experiment in experiments:
                 if experiments[experiment] > 0:
                     checkbox_experiments[experiment] = experiments[experiment]
                     counter += 1
 
-            cols1 = st.beta_columns(8)
+            cols1 = st.columns(8)
             if counter > 8:
-                cols2 = st.beta_columns(8)
+                cols2 = st.columns(8)
 
             if counter > 16:
-                cols3 = st.beta_columns(8)
+                cols3 = st.columns(8)
             idx = 0
             plotexp = {}
             plotexps_contour = {}
@@ -910,13 +913,13 @@ elif path_option == "Study operator limits":
                 if plotexp:
                     plotexps_contour[experiment] = [experiments[experiment], experiment]
 
-            contour_cols = st.beta_columns(2)
+            contour_cols = st.columns(2)
             #ge_idx = int(np.where(LEFT_model.element_names=="76Ge")[0][0])
             #plot_isotope = contour_cols[0].multiselect("Choose an isotope:", options = LEFT_model.element_names, #index = ge_idx, 
             #                            key = "contourrisotope")
             WCx = contour_cols[0].selectbox("X-axis WC", options = np.array(list(LEFT_model.WC.keys())), key = "WCx"+str(plotidx))
             WCy = contour_cols[1].selectbox("Y-axis WC", options = np.array(list(LEFT_model.WC.keys()))[np.array(list(LEFT_model.WC.keys()))!=WCx], key = "WCy"+str(plotidx))
-            options_cols = st.beta_columns(2)
+            options_cols = st.columns(2)
             vary_phase = options_cols[0].checkbox("Vary phase", help = "If you check this box we will vary the relative phase between the two Wilson coefficients", key = "varyphases"+str(plotidx))
             n_vary = 1
             if vary_phase:
@@ -1058,24 +1061,24 @@ elif path_option == "Study operator limits":
                     checkbox_experiments[experiment] = experiments[experiment]
                     counter += 1
 
-            cols1 = st.beta_columns(8)
+            cols1 = st.columns(8)
             if counter > 8:
-                cols2 = st.beta_columns(8)
+                cols2 = st.columns(8)
 
             if counter > 16:
-                cols3 = st.beta_columns(8)
+                cols3 = st.columns(8)
 
             for experiment in experiments:
                 if experiments[experiment] > 0:
                     checkbox_experiments[experiment] = experiments[experiment]
                     counter += 1
 
-            cols1 = st.beta_columns(8)
+            cols1 = st.columns(8)
             if counter > 8:
-                cols2 = st.beta_columns(8)
+                cols2 = st.columns(8)
 
             if counter > 16:
-                cols3 = st.beta_columns(8)
+                cols3 = st.columns(8)
             idx = 0
             plotexp = {}
             plotexps_contour = {}
@@ -1095,13 +1098,13 @@ elif path_option == "Study operator limits":
                 if plotexp:
                     plotexps_contour[experiment] = [experiments[experiment], experiment]
 
-            contour_cols = st.beta_columns(2)
+            contour_cols = st.columns(2)
             #ge_idx = int(np.where(LEFT_model.element_names=="76Ge")[0][0])
             #plot_isotope = contour_cols[0].multiselect("Choose an isotope:", options = LEFT_model.element_names, #index = ge_idx, 
             #                            key = "contourrisotope")
             WCx = contour_cols[0].selectbox("X-axis WC", options = np.array(list(SMEFT_model.WC.keys())), key = "WCx"+str(plotidx))
             WCy = contour_cols[1].selectbox("Y-axis WC", options = np.array(list(SMEFT_model.WC.keys()))[np.array(list(SMEFT_model.WC.keys()))!=WCx], key = "WCy"+str(plotidx))
-            options_cols = st.beta_columns(2)
+            options_cols = st.columns(2)
             vary_phase = options_cols[0].checkbox("Vary phase", help = "If you check this box we will vary the relative phase between the two Wilson coefficients", key = "varyphases"+str(plotidx))
             n_vary = 1
             if vary_phase:
